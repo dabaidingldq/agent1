@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HR 端 - 审批处理</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f5f7fb;
+            color: #1f2937;
+        }
+        .topbar {
+            background: #111827;
+            color: #fff;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .topbar a {
+            color: #93c5fd;
+            text-decoration: none;
+            margin-left: 16px;
+        }
+        .container {
+            max-width: 1280px;
+            margin: 24px auto;
+            padding: 0 16px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 14px;
+            padding: 18px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+            margin-bottom: 18px;
+        }
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+        input, select, textarea, button {
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+        textarea { min-height: 72px; width: 100%; }
+        button {
+            cursor: pointer;
+            background: #2563eb;
+            color: white;
+            border: none;
+        }
+        button.secondary { background: #6b7280; }
+        button.success { background: #16a34a; }
+        button.danger { background: #dc2626; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 14px;
+            background: #fff;
+        }
+        th, td {
+            border-bottom: 1px solid #e5e7eb;
+            padding: 12px 10px;
+            text-align: left;
+            vertical-align: top;
+            font-size: 14px;
+        }
+        th { background: #f9fafb; }
+        .row-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .muted { color: #6b7280; font-size: 13px; }
+        .section-title { margin: 0 0 12px; }
+        .status-bar {
+            margin-top: 10px;
+            color: #2563eb;
+            font-size: 14px;
+            min-height: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <div><strong>HR 审批中心</strong></div>
+    <div>
+        <a href="/hr/chat.html">返回 HR 智能助手</a>
+        <a href="/hr/analytics.html">团队分析</a>
+    </div>
+</div>
+
+<div class="container">
+    <div class="card">
+        <h2 class="section-title">查询条件</h2>
+        <div class="toolbar">
+            <label>HR 用户 ID：
+                <input id="userId" type="number" value="2001" />
+            </label>
+            <label>业务类型：
+                <select id="businessType">
+                    <option value="">全部</option>
+                    <option value="LEAVE">请假</option>
+                    <option value="CERTIFICATE">证明开具</option>
+                    <option value="OFFICE_SUPPLY">办公用品</option>
+                </select>
+            </label>
+            <label>状态：
+                <select id="status">
+                    <option value="">全部</option>
+                    <option value="PENDING">待审批</option>
+                    <option value="PENDING_REVIEW">待复核</option>
+                    <option value="APPROVED">已通过</option>
+                    <option value="REJECTED">已驳回</option>
+                </select>
+            </label>
+            <button onclick="loadPending()">查询待审批</button>
+            <button class="secondary" onclick="loadAll()">查询全部</button>
+        </div>
+        <div class="status-bar" id="message"></div>
+    </div>
+
+    <div class="card">
+        <h2 class="section-title">审批备注</h2>
+        <textarea id="comment" placeholder="可填写审批备注。当前后端会回传备注，但不会落库存档。"></textarea>
+    </div>
+
+    <div class="card">
+        <h2 class="section-title">审批列表</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>审批ID</th>
+                <th>申请人</th>
+                <th>业务类型</th>
+                <th>当前状态</th>
+                <th>当前节点</th>
+                <th>申请摘要</th>
+                <th>提交时间</th>
+                <th>操作</th>
+            </tr>
+            </thead>
+            <tbody id="approvalTableBody">
+            <tr><td colspan="8" class="muted">点击上方按钮加载数据</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const role = 'HR';
+
+    function getUserId() {
+        const value = document.getElementById('userId').value;
+        if (!value) {
+            alert('请先填写 userId');
+            throw new Error('userId empty');
+        }
+        return value;
+    }
+
+    function buildQuery(includeStatus) {
+        const userId = getUserId();
+        const businessType = document.getElementById('businessType').value;
+        const status = document.getElementById('status').value;
+
+        const params = new URLSearchParams();
+        params.set('userId', userId);
+        params.set('role', role);
+        if (businessType) params.set('businessType', businessType);
+        if (includeStatus && status) params.set('status', status);
+        return params.toString();
+    }
+
+    async function loadPending() {
+        setMessage('正在加载待审批列表...');
+        const res = await fetch(`/manage/approvals/pending?${buildQuery(false)}`);
+        const data = await res.json();
+        renderTable(data.data || []);
+        setMessage(data.message || '待审批列表已刷新');
+    }
+
+    async function loadAll() {
+        setMessage('正在加载全部审批列表...');
+        const res = await fetch(`/manage/approvals/all?${buildQuery(true)}`);
+        const data = await res.json();
+        renderTable(data.data || []);
+        setMessage(data.message || '全部审批列表已刷新');
+    }
+
+    function renderTable(rows) {
+        const tbody = document.getElementById('approvalTableBody');
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="muted">暂无数据</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = rows.map(row => `
+            <tr>
+                <td>${row.id ?? '--'}</td>
+                <td>${row.employeeName ?? '--'}<div class="muted">userId: ${row.applicantUserId ?? '--'}</div></td>
+                <td>${row.businessType ?? '--'}</td>
+                <td>${row.status ?? '--'}</td>
+                <td>${row.currentNode ?? '--'}</td>
+                <td>${escapeHtml(row.detailSummary || '--')}</td>
+                <td>${formatTime(row.createdAt)}</td>
+                <td>
+                    <div class="row-actions">
+                        <button class="success" onclick="handleApproval(${row.id}, 'approve')">通过</button>
+                        <button class="danger" onclick="handleApproval(${row.id}, 'reject')">驳回</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function handleApproval(id, action) {
+        const userId = getUserId();
+        const comment = document.getElementById('comment').value || '';
+        const confirmed = confirm(`确认要对审批单 #${id} 执行${action === 'approve' ? '通过' : '驳回'}吗？`);
+        if (!confirmed) return;
+
+        setMessage(`正在提交审批操作：#${id} ...`);
+
+        const res = await fetch(`/manage/approvals/${id}/${action}?userId=${encodeURIComponent(userId)}&role=${role}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ comment })
+        });
+        const data = await res.json();
+        alert(data.data || data.message || '操作完成');
+        await loadPending();
+    }
+
+    function setMessage(msg) {
+        document.getElementById('message').textContent = msg || '';
+    }
+
+    function formatTime(value) {
+        if (!value) return '--';
+        return String(value).replace('T', ' ');
+    }
+
+    function escapeHtml(text) {
+        return String(text)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
+    }
+
+    loadPending();
+</script>
+</body>
+</html>
