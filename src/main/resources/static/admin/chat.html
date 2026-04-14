@@ -8,23 +8,29 @@
     <link href="https://unpkg.com/layui@2.13.4/dist/css/layui.css" rel="stylesheet">
     <link href="../assets/css/common.css" rel="stylesheet">
     <style>
-        .chat-layout { display:flex; height:100vh; }
-        .session-sidebar { width:280px; background:#111827; color:#fff; display:flex; flex-direction:column; }
-        .session-header { padding:16px; border-bottom:1px solid rgba(255,255,255,0.08); }
-        .session-list { flex:1; overflow-y:auto; padding:8px; }
-        .session-item { padding:12px; border-radius:10px; cursor:pointer; margin-bottom:8px; background:rgba(255,255,255,0.04); }
-        .session-item.active { background:#333; }
-        .session-title { font-size:14px; font-weight:600; margin-bottom:6px; }
-        .session-last { font-size:12px; opacity:.85; line-height:1.6; max-height:38px; overflow:hidden; }
-        .chat-main { flex:1; display:flex; flex-direction:column; background:#f7f8fa; }
-        .chat-topbar { height:60px; background:#fff; border-bottom:1px solid #eee; display:flex; align-items:center; justify-content:space-between; padding:0 20px; }
-        .chat-scroll { flex:1; overflow-y:auto; padding:20px; }
-        .msg-row { margin-bottom:16px; display:flex; flex-direction:column; }
-        .msg-row.user { align-items:flex-end; }
-        .msg-bubble { max-width:72%; padding:12px 14px; border-radius:14px; line-height:1.8; white-space:pre-wrap; word-break:break-word; background:#fff; border:1px solid #eee; }
-        .msg-row.user .msg-bubble { background:#333; color:#fff; border:none; }
-        .chat-input-area { background:#fff; border-top:1px solid #eee; padding:16px 20px; }
-        .empty-tip { color:#999; text-align:center; margin-top:80px; }
+        .chat-layout { display: flex; height: 100vh; background: #f7f8fa; }
+        .session-sidebar { width: 260px; background: #111827; color: #fff; display: flex; flex-direction: column; }
+        .session-header { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .session-list { flex: 1; overflow-y: auto; padding: 8px; }
+        .session-item { padding: 12px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; background: rgba(255,255,255,0.04); }
+        .session-item.active { background: #333; }
+        .session-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+        .session-last { font-size: 12px; opacity: 0.85; line-height: 1.6; max-height: 38px; overflow: hidden; }
+        .chat-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .chat-topbar { height: 60px; background: #fff; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
+        .main-content { flex: 1; display: flex; min-height: 0; }
+        .chat-center { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .chat-scroll { flex: 1; overflow-y: auto; padding: 20px; }
+        .msg-row { margin-bottom: 16px; display: flex; flex-direction: column; }
+        .msg-row.user { align-items: flex-end; }
+        .msg-bubble { max-width: 72%; padding: 12px 14px; border-radius: 14px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; background: #fff; border: 1px solid #eee; }
+        .msg-row.user .msg-bubble { background: #333; color: #fff; border: none; }
+        .chat-input-area { background: #fff; border-top: 1px solid #eee; padding: 16px 20px; }
+        .empty-tip { color: #999; text-align: center; margin-top: 80px; }
+        .right-panel { width: 300px; border-left: 1px solid #eee; background: #fff; overflow-y: auto; padding: 16px; }
+        .panel-card { border: 1px solid #eee; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+        .panel-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+        .quick-btn { width: 100%; text-align: left; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -49,15 +55,37 @@
             </div>
         </div>
 
-        <div class="chat-scroll" id="chatScroll">
-            <div class="empty-tip">请选择左侧历史会话，或点击“新建对话”开始聊天。</div>
-        </div>
+        <div class="main-content">
+            <div class="chat-center">
+                <div class="chat-scroll" id="chatScroll">
+                    <div class="empty-tip">请选择左侧历史会话，或点击“新建对话”开始聊天。</div>
+                </div>
 
-        <div class="chat-input-area">
-            <div class="layui-input-group">
-                <input type="text" id="messageInput" class="layui-input" placeholder="请输入管理员相关问题，例如：查询 HR-OPS 成本中心预算使用情况">
-                <div class="layui-input-suffix">
-                    <button class="layui-btn" style="background:#333;" id="sendBtn">发送</button>
+                <div class="chat-input-area">
+                    <div class="layui-input-group">
+                        <input type="text" id="messageInput" class="layui-input" placeholder="请输入管理员相关问题">
+                        <div class="layui-input-suffix">
+                            <button class="layui-btn" style="background:#333;" id="sendBtn">发送</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="panel-card">
+                    <h3>快捷入口</h3>
+                    <button class="layui-btn layui-btn-primary quick-btn quick-question" data-question="查询 HR-OPS 成本中心预算使用情况">预算查询</button>
+                    <button class="layui-btn layui-btn-primary quick-btn quick-question" data-question="给 HR-OPS 成本中心增加预算使用金额 100">预算更新</button>
+                    <button class="layui-btn layui-btn-primary quick-btn quick-question" data-question="重建知识库">知识库重建</button>
+                    <button class="layui-btn layui-btn-primary quick-btn quick-question" data-question="查询当前知识库向量条数">知识库统计</button>
+                    <button class="layui-btn layui-btn-primary quick-btn quick-question" data-question="最近有哪些关键审计日志">审计日志</button>
+                </div>
+
+                <div class="panel-card">
+                    <h3>常见问题</h3>
+                    <button class="layui-btn layui-btn-normal quick-btn quick-question" data-question="系统里有哪些管理员能力？">管理员能力说明</button>
+                    <button class="layui-btn layui-btn-normal quick-btn quick-question" data-question="预算预警规则是什么？">预算规则</button>
+                    <button class="layui-btn layui-btn-normal quick-btn quick-question" data-question="知识库重建后会影响哪些功能？">知识库影响范围</button>
                 </div>
             </div>
         </div>
@@ -88,17 +116,9 @@
         const currentChatLabelEl = document.getElementById('currentChatLabel');
         const messageInputEl = document.getElementById('messageInput');
 
-        function createChatId() {
-            return 'chat-' + Date.now();
-        }
-
+        function createChatId() { return 'chat-' + Date.now(); }
         function escapeHtml(text) {
-            return (text || '')
-                .replaceAll('&', '&amp;')
-                .replaceAll('<', '&lt;')
-                .replaceAll('>', '&gt;')
-                .replaceAll('"', '&quot;')
-                .replaceAll("'", '&#39;');
+            return (text || '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
         }
 
         function renderSessions() {
@@ -106,14 +126,12 @@
                 sessionListEl.innerHTML = '<div style="padding:16px;color:#bbb;">暂无历史会话</div>';
                 return;
             }
-
             sessionListEl.innerHTML = sessionListData.map(item => `
       <div class="session-item ${item.chatId === currentChatId ? 'active' : ''}" data-chat-id="${item.chatId}">
         <div class="session-title">${escapeHtml(item.title || '新对话')}</div>
         <div class="session-last">${escapeHtml(item.lastMessage || '')}</div>
       </div>
     `).join('');
-
             document.querySelectorAll('.session-item').forEach(el => {
                 el.addEventListener('click', async () => {
                     currentChatId = el.dataset.chatId;
@@ -128,13 +146,11 @@
                 chatScrollEl.innerHTML = '<div class="empty-tip">当前会话还没有消息。</div>';
                 return;
             }
-
             chatScrollEl.innerHTML = messages.map(msg => `
       <div class="msg-row ${msg.senderType === 'USER' ? 'user' : 'assistant'}">
         <div class="msg-bubble">${escapeHtml(msg.content)}</div>
       </div>
     `).join('');
-
             chatScrollEl.scrollTop = chatScrollEl.scrollHeight;
         }
 
@@ -150,8 +166,8 @@
             renderMessages(res.data || []);
         }
 
-        async function sendMessage() {
-            const message = messageInputEl.value.trim();
+        async function sendMessage(messageText) {
+            const message = (messageText ?? messageInputEl.value).trim();
             if (!message) {
                 layer.msg('请输入内容');
                 return;
@@ -163,19 +179,12 @@
             }
 
             messageInputEl.value = '';
-
             const existing = chatScrollEl.querySelector('.empty-tip');
-            if (existing) {
-                chatScrollEl.innerHTML = '';
-            }
+            if (existing) chatScrollEl.innerHTML = '';
 
             chatScrollEl.innerHTML += `
-      <div class="msg-row user">
-        <div class="msg-bubble">${escapeHtml(message)}</div>
-      </div>
-      <div class="msg-row assistant" id="assistant-loading">
-        <div class="msg-bubble">处理中，请稍候...</div>
-      </div>
+      <div class="msg-row user"><div class="msg-bubble">${escapeHtml(message)}</div></div>
+      <div class="msg-row assistant" id="assistant-loading"><div class="msg-bubble">处理中，请稍候...</div></div>
     `;
             chatScrollEl.scrollTop = chatScrollEl.scrollHeight;
 
@@ -187,30 +196,18 @@
                     role: currentUser.role,
                     message
                 };
-
                 const result = await post('/ai/admin/chat/sync', body);
-
                 const loadingEl = document.getElementById('assistant-loading');
                 if (loadingEl) {
-                    loadingEl.outerHTML = `
-          <div class="msg-row assistant">
-            <div class="msg-bubble">${escapeHtml(result)}</div>
-          </div>
-        `;
+                    loadingEl.outerHTML = `<div class="msg-row assistant"><div class="msg-bubble">${escapeHtml(result)}</div></div>`;
                 }
-
                 await loadSessions();
             } catch (e) {
                 const loadingEl = document.getElementById('assistant-loading');
                 if (loadingEl) {
-                    loadingEl.outerHTML = `
-          <div class="msg-row assistant">
-            <div class="msg-bubble">请求失败：${escapeHtml(e.message)}</div>
-          </div>
-        `;
+                    loadingEl.outerHTML = `<div class="msg-row assistant"><div class="msg-bubble">请求失败：${escapeHtml(e.message)}</div></div>`;
                 }
             }
-
             chatScrollEl.scrollTop = chatScrollEl.scrollHeight;
         }
 
@@ -221,11 +218,13 @@
             renderSessions();
         });
 
-        document.getElementById('sendBtn').addEventListener('click', sendMessage);
+        document.getElementById('sendBtn').addEventListener('click', () => sendMessage());
         messageInputEl.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        document.querySelectorAll('.quick-question').forEach(btn => {
+            btn.addEventListener('click', () => sendMessage(btn.dataset.question));
         });
 
         loadSessions();
