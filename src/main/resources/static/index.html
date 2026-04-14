@@ -1,157 +1,152 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>企业 HR 智能体系统</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://unpkg.com/layui@2.13.4/dist/css/layui.css" rel="stylesheet">
     <style>
+        * { box-sizing: border-box; }
         body {
-            background: linear-gradient(135deg, #f5f7fa, #e4ecfb);
-            min-height: 100vh;
             margin: 0;
-            font-family: Arial, sans-serif;
+            font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+            color: #111827;
         }
-
-        .home-container {
-            max-width: 1180px;
-            margin: 0 auto;
-            padding: 60px 20px;
-        }
-
         .hero {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .hero h1 {
-            font-size: 38px;
-            margin-bottom: 12px;
-            color: #1f2d3d;
-        }
-
-        .hero p {
-            font-size: 16px;
-            color: #666;
-            line-height: 1.8;
-            max-width: 860px;
+            max-width: 1200px;
             margin: 0 auto;
+            padding: 48px 20px 24px;
         }
-
-        .role-card {
+        .hero h1 {
+            margin: 0 0 14px;
+            font-size: 34px;
+        }
+        .hero p {
+            margin: 0;
+            line-height: 1.7;
+            color: #4b5563;
+            max-width: 900px;
+        }
+        .grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        .card {
             background: #fff;
-            border-radius: 16px;
-            padding: 28px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
-            height: 100%;
+            border-radius: 18px;
+            padding: 22px;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+            border: 1px solid #e5e7eb;
         }
-
-        .role-title {
+        .card h2 {
+            margin: 0 0 12px;
             font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 12px;
         }
-
-        .role-desc {
-            color: #666;
+        .card p {
+            margin: 0 0 14px;
+            line-height: 1.7;
+            color: #4b5563;
+        }
+        .card ul {
+            margin: 0 0 18px 18px;
+            padding: 0;
+            color: #374151;
             line-height: 1.8;
-            min-height: 88px;
         }
-
-        .feature-list {
-            margin: 18px 0 24px;
-            padding-left: 18px;
-            color: #444;
-            line-height: 1.9;
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
         }
-
-        .footer-tip {
-            margin-top: 36px;
-            text-align: center;
-            color: #888;
+        .btn {
+            display: inline-block;
+            padding: 10px 14px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 14px;
+            color: #fff;
+            background: #2563eb;
         }
-
-        .quick-link-group .layui-btn {
-            margin-right: 8px;
-            margin-bottom: 8px;
+        .btn.secondary { background: #111827; }
+        .btn.green { background: #16a34a; }
+        .btn.purple { background: #7c3aed; }
+        .btn.gray { background: #4b5563; }
+        .footer {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 6px 20px 40px;
+            color: #6b7280;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
-<div class="home-container">
-    <div class="hero">
-        <h1>企业人力资源管理智能体系统</h1>
-        <p>
-            本系统面向员工、HR 与管理员三类角色，提供知识问答、事务申请、审批追踪、团队分析、
-            知识库管理、预算预警与审计追踪等能力。你可以从下面选择对应入口进入。
-        </p>
-    </div>
+<div class="hero">
+    <h1>企业人力资源管理智能体系统</h1>
+    <p>
+        本系统面向员工、HR 与管理员三类角色，提供知识问答、事务申请、审批追踪、团队分析、
+        知识库管理、预算预警与审计追踪等能力。请选择对应入口进入。
+    </p>
+</div>
 
-    <div class="layui-row layui-col-space20">
-        <div class="layui-col-md4">
-            <div class="role-card">
-                <div class="role-title" style="color:#1E9FFF;">员工端</div>
-                <div class="role-desc">
-                    面向普通员工，提供政策查询、请假与办公用品申请、证明开具、审批进度查询、个人看板与消息通知等功能。
-                </div>
-                <ul class="feature-list">
-                    <li>智能问答与政策查询</li>
-                    <li>请假 / 办公用品 / 证明申请</li>
-                    <li>审批进度与历史审批</li>
-                    <li>个人数据看板与消息中心</li>
-                </ul>
-                <div class="quick-link-group">
-                    <a class="layui-btn" href="./employee/chat.html">进入员工助手</a>
-                    <a class="layui-btn layui-btn-primary" href="./employee/dashboard.html">个人看板</a>
-                    <a class="layui-btn layui-btn-primary" href="./employee/notifications.html">消息中心</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="layui-col-md4">
-            <div class="role-card">
-                <div class="role-title" style="color:#FF9800;">HR 端</div>
-                <div class="role-desc">
-                    面向 HR 人员，提供团队分析、政策公告发布、历史审批检索、流程解释与员工事务支持等功能。
-                </div>
-                <ul class="feature-list">
-                    <li>HR 智能问答</li>
-                    <li>团队加班分析</li>
-                    <li>历史审批检索</li>
-                    <li>政策公告与事务支持</li>
-                </ul>
-                <div class="quick-link-group">
-                    <a class="layui-btn layui-btn-warm" href="./hr/chat.html">进入 HR 助手</a>
-                    <a class="layui-btn layui-btn-primary" href="./hr/analytics.html">团队分析</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="layui-col-md4">
-            <div class="role-card">
-                <div class="role-title" style="color:#333;">管理员端</div>
-                <div class="role-desc">
-                    面向系统管理员，提供知识库管理、预算管理、审计日志查看和系统治理相关能力。
-                </div>
-                <ul class="feature-list">
-                    <li>知识库重建与调试</li>
-                    <li>成本中心预算管理</li>
-                    <li>系统审计日志查询</li>
-                    <li>后台治理与配置支持</li>
-                </ul>
-                <div class="quick-link-group">
-                    <a class="layui-btn layui-btn-primary" style="background:#333;" href="./admin/knowledge.html">知识库管理</a>
-                    <a class="layui-btn layui-btn-primary" href="./admin/budget.html">预算管理</a>
-                    <a class="layui-btn layui-btn-primary" href="./admin/audit.html">审计日志</a>
-                </div>
-            </div>
+<div class="grid">
+    <div class="card">
+        <h2>员工端</h2>
+        <p>面向普通员工，提供政策查询、请假与办公用品申请、证明开具、审批进度查询、个人看板与消息通知等功能。</p>
+        <ul>
+            <li>智能问答与政策查询</li>
+            <li>请假 / 办公用品 / 证明申请</li>
+            <li>审批进度与历史审批</li>
+            <li>个人数据看板与消息中心</li>
+        </ul>
+        <div class="actions">
+            <a class="btn secondary" href="/employee/chat.html">进入员工助手</a>
+            <a class="btn" href="/employee/dashboard.html">个人看板</a>
+            <a class="btn gray" href="/employee/messages.html">消息中心</a>
+            <a class="btn green" href="/employee/approvals.html">审批进度</a>
         </div>
     </div>
 
-    <div class="footer-tip">
-        建议本地先启动后端服务，再打开本页面进行联调。
+    <div class="card">
+        <h2>HR 端</h2>
+        <p>面向 HR 人员，提供团队分析、历史审批检索、审批处理、流程解释与员工事务支持等功能。</p>
+        <ul>
+            <li>HR 智能问答</li>
+            <li>团队加班分析</li>
+            <li>待审批 / 历史审批</li>
+            <li>政策公告与事务支持</li>
+        </ul>
+        <div class="actions">
+            <a class="btn secondary" href="/hr/chat.html">进入 HR 助手</a>
+            <a class="btn green" href="/hr/approvals.html">HR 审批处理</a>
+            <a class="btn" href="/hr/analytics.html">团队分析</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>管理员端</h2>
+        <p>面向系统管理员，提供知识库管理、预算管理、审计日志、全部审批处理和系统治理能力。</p>
+        <ul>
+            <li>知识库重建与调试</li>
+            <li>成本中心预算管理</li>
+            <li>系统审计日志查询</li>
+            <li>全部审批与后台治理</li>
+        </ul>
+        <div class="actions">
+            <a class="btn secondary" href="/admin/chat.html">管理员智能助手</a>
+            <a class="btn purple" href="/admin/approvals.html">全部审批管理</a>
+            <a class="btn" href="/admin/budget.html">预算管理</a>
+            <a class="btn gray" href="/admin/audit.html">审计日志</a>
+        </div>
     </div>
 </div>
-<script src="https://unpkg.com/layui@2.13.4/dist/layui.js"></script>
+
+<div class="footer">
+
+</div>
 </body>
 </html>

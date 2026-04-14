@@ -30,16 +30,6 @@ public class ApprovalManageController {
                 () -> BaseResponse.success(approvalManageService.queryPendingApprovals(businessType)));
     }
 
-    @GetMapping("/all")
-    public BaseResponse<List<ApprovalManageService.ApprovalManageItem>> all(
-            @RequestParam Long userId,
-            @RequestParam String role,
-            @RequestParam(required = false) String businessType,
-            @RequestParam(required = false) String status) {
-        return withContext(userId, role, "approval-all",
-                () -> BaseResponse.success(approvalManageService.queryAllApprovals(businessType, status)));
-    }
-
     @PostMapping("/{approvalId}/approve")
     public BaseResponse<String> approve(
             @PathVariable Long approvalId,
@@ -66,6 +56,15 @@ public class ApprovalManageController {
                                 approvalId,
                                 request == null ? "" : request.getComment()
                         )));
+    }
+
+    @GetMapping("/{approvalId}/summary")
+    public BaseResponse<String> summary(
+            @PathVariable Long approvalId,
+            @RequestParam Long userId,
+            @RequestParam String role) {
+        return withContext(userId, role, "approval-summary",
+                () -> BaseResponse.success(approvalManageService.getApprovalSummary(approvalId)));
     }
 
     private <T> BaseResponse<T> withContext(Long userId, String role, String chatId, Supplier<BaseResponse<T>> action) {

@@ -1,231 +1,262 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>HR 端 - 智能助手</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" href="data:,">
-    <link href="https://unpkg.com/layui@2.13.4/dist/css/layui.css" rel="stylesheet">
-    <link href="../assets/css/common.css" rel="stylesheet">
     <style>
-        .chat-layout { display: flex; height: 100vh; background: #f7f8fa; }
-        .session-sidebar { width: 260px; background: #111827; color: #fff; display: flex; flex-direction: column; }
-        .session-header { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-        .session-list { flex: 1; overflow-y: auto; padding: 8px; }
-        .session-item { padding: 12px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; background: rgba(255,255,255,0.04); }
-        .session-item.active { background: #ff9800; }
-        .session-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
-        .session-last { font-size: 12px; opacity: 0.85; line-height: 1.6; max-height: 38px; overflow: hidden; }
-        .chat-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-        .chat-topbar { height: 60px; background: #fff; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
-        .main-content { flex: 1; display: flex; min-height: 0; }
-        .chat-center { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-        .chat-scroll { flex: 1; overflow-y: auto; padding: 20px; }
-        .msg-row { margin-bottom: 16px; display: flex; flex-direction: column; }
-        .msg-row.user { align-items: flex-end; }
-        .msg-bubble { max-width: 72%; padding: 12px 14px; border-radius: 14px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; background: #fff; border: 1px solid #eee; }
-        .msg-row.user .msg-bubble { background: #ff9800; color: #fff; border: none; }
-        .chat-input-area { background: #fff; border-top: 1px solid #eee; padding: 16px 20px; }
-        .empty-tip { color: #999; text-align: center; margin-top: 80px; }
-        .right-panel { width: 300px; border-left: 1px solid #eee; background: #fff; overflow-y: auto; padding: 16px; }
-        .panel-card { border: 1px solid #eee; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-        .panel-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 12px; }
-        .quick-btn { width: 100%; text-align: left; margin-bottom: 10px; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f5f7fb;
+            color: #111827;
+        }
+        .layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            min-height: 100vh;
+        }
+        .sidebar {
+            background: #111827;
+            color: #fff;
+            padding: 20px;
+        }
+        .sidebar h2 {
+            margin: 0 0 18px;
+            font-size: 22px;
+        }
+        .new-chat-btn {
+            width: 100%;
+            border: none;
+            background: #2563eb;
+            color: #fff;
+            border-radius: 10px;
+            padding: 12px;
+            cursor: pointer;
+            margin-bottom: 18px;
+        }
+        .menu a {
+            display: block;
+            color: #dbeafe;
+            text-decoration: none;
+            padding: 10px 12px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            background: rgba(255,255,255,0.06);
+        }
+        .main {
+            padding: 24px;
+        }
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+        .topbar a {
+            text-decoration: none;
+            color: #2563eb;
+            margin-left: 12px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+            margin-bottom: 18px;
+        }
+        .quick-links {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .quick-links a, .quick-links button {
+            display: inline-block;
+            padding: 10px 14px;
+            border-radius: 10px;
+            background: #eef2ff;
+            color: #1e3a8a;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+        }
+        .chat-box {
+            min-height: 340px;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            background: #fafafa;
+            overflow: auto;
+        }
+        .msg {
+            margin-bottom: 14px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+        }
+        .msg.user { color: #111827; }
+        .msg.assistant { color: #1d4ed8; }
+        .composer {
+            display: grid;
+            grid-template-columns: 1fr 120px;
+            gap: 12px;
+            margin-top: 14px;
+        }
+        textarea, input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+        button.send-btn {
+            border: none;
+            background: #2563eb;
+            color: #fff;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .inline-form {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .inline-form label {
+            min-width: 180px;
+        }
+        .tips {
+            color: #6b7280;
+            font-size: 14px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
-<div class="chat-layout">
-    <div class="session-sidebar">
-        <div class="session-header">
-            <button class="layui-btn layui-btn-fluid layui-btn-warm" id="newChatBtn">+ 新建对话</button>
+<div class="layout">
+    <aside class="sidebar">
+        <h2>HR 智能助手</h2>
+        <button class="new-chat-btn" onclick="newChat()">+ 新建对话</button>
+        <div class="menu">
+            <a href="/index.html">返回首页</a>
+            <a href="/hr/chat.html">HR 助手</a>
+            <a href="/hr/analytics.html">团队分析</a>
+            <a href="/hr/approvals.html">审批处理</a>
         </div>
-        <div class="session-list" id="sessionList"></div>
-    </div>
+    </aside>
 
-    <div class="chat-main">
-        <div class="chat-topbar">
+    <main class="main">
+        <div class="topbar">
             <div>
-                <div style="font-size:18px;font-weight:700;">HR 智能助手</div>
-                <div style="font-size:12px;color:#999;" id="currentChatLabel">未选择会话</div>
+                <h1 style="margin:0;font-size:28px;">HR 端 - 智能助手</h1>
+                <div style="color:#6b7280;margin-top:6px;">可直接在对话中查询流程、审批历史，或执行审批动作。</div>
             </div>
             <div>
-                <a class="layui-btn layui-btn-primary layui-btn-sm" href="./analytics.html">团队分析</a>
+                <a href="/hr/analytics.html">团队分析</a>
+                <a href="/hr/approvals.html">审批处理</a>
             </div>
         </div>
 
-        <div class="main-content">
-            <div class="chat-center">
-                <div class="chat-scroll" id="chatScroll">
-                    <div class="empty-tip">请选择左侧历史会话，或点击“新建对话”开始聊天。</div>
-                </div>
-
-                <div class="chat-input-area">
-                    <div class="layui-input-group">
-                        <input type="text" id="messageInput" class="layui-input" placeholder="请输入 HR 相关问题">
-                        <div class="layui-input-suffix">
-                            <button class="layui-btn layui-btn-warm" id="sendBtn">发送</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="right-panel">
-                <div class="panel-card">
-                    <h3>快捷入口</h3>
-                    <button class="layui-btn layui-btn-primary quick-btn quick-question" data-question="本周团队谁的加班时长最多">团队加班排行</button>
-                    <button class="layui-btn layui-btn-primary quick-btn quick-question" data-question="帮我看看团队 2026-04 的历史审批记录">历史审批</button>
-                    <button class="layui-btn layui-btn-primary quick-btn quick-question" data-question="发布一个政策公告，标题是新版请假制度上线，摘要是请大家关注年假和育儿假的最新规则">发布政策公告</button>
-                    <button class="layui-btn layui-btn-primary quick-btn quick-question" data-question="收入证明为什么需要人工复核？">人工复核说明</button>
-                </div>
-
-                <div class="panel-card">
-                    <h3>常见问答</h3>
-                    <button class="layui-btn layui-btn-normal quick-btn quick-question" data-question="入职第一天要带什么？">入职流程</button>
-                    <button class="layui-btn layui-btn-normal quick-btn quick-question" data-question="离职最后一天要交接哪些 IT 设备？">离职流程</button>
-                    <button class="layui-btn layui-btn-normal quick-btn quick-question" data-question="内部活水申请要经过几级审批？">转岗流程</button>
-                </div>
+        <div class="card">
+            <h3 style="margin-top:0;">快捷入口</h3>
+            <div class="quick-links">
+                <a href="/hr/analytics.html">团队加班排行</a>
+                <a href="/hr/approvals.html">历史审批 / 待审批</a>
+                <button type="button" onclick="fillExample('请查询当前待我审批的请假单')">待我审批</button>
+                <button type="button" onclick="fillExample('通过ID为1的请求，备注：同意')">审批通过示例</button>
+                <button type="button" onclick="fillExample('驳回ID为1的请求，备注：信息不完整')">审批驳回示例</button>
+                <button type="button" onclick="fillExample('请帮我解释入职流程')">入职流程</button>
             </div>
         </div>
-    </div>
+
+        <div class="card">
+            <div class="inline-form">
+                <label>
+                    当前 HR 用户 ID
+                    <input id="userId" type="number" value="2001" />
+                </label>
+                <label>
+                    chatId
+                    <input id="chatId" type="text" value="hr-chat-001" />
+                </label>
+            </div>
+
+            <div class="chat-box" id="chatBox">
+                <div class="msg assistant">您好，我是 HR 智能助手。您可以直接说：“查询待审批列表” 或 “通过ID为1的请求”。</div>
+            </div>
+
+            <div class="composer">
+                <textarea id="message" placeholder="请输入消息，例如：通过ID为1的请求，备注：同意"></textarea>
+                <button class="send-btn" onclick="sendMessage()">发送</button>
+            </div>
+
+            <div class="tips">
+                常见问答：入职流程、离职流程、转岗流程、审批规则、证明复核说明
+            </div>
+        </div>
+    </main>
 </div>
 
-<script src="https://unpkg.com/layui@2.13.4/dist/layui.js"></script>
-<script src="../assets/js/config.js"></script>
-<script src="../assets/js/request.js"></script>
-<script src="../assets/js/auth.js"></script>
 <script>
-    layui.use(['layer'], function () {
-        const layer = layui.layer;
+    function newChat() {
+        document.getElementById('chatId').value = 'hr-chat-' + Date.now();
+        document.getElementById('chatBox').innerHTML =
+            '<div class="msg assistant">已创建新会话。您可以直接开始提问。</div>';
+    }
 
-        setCurrentUser({
-            userId: 9001,
-            role: 'HR',
-            tenantId: 'company-a',
-            displayName: 'HR 用户'
-        });
+    function fillExample(text) {
+        document.getElementById('message').value = text;
+    }
 
-        const currentUser = getCurrentUser();
-        let currentChatId = '';
-        let sessionListData = [];
+    function appendMessage(role, text) {
+        const box = document.getElementById('chatBox');
+        const div = document.createElement('div');
+        div.className = 'msg ' + role;
+        div.textContent = text;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
 
-        const sessionListEl = document.getElementById('sessionList');
-        const chatScrollEl = document.getElementById('chatScroll');
-        const currentChatLabelEl = document.getElementById('currentChatLabel');
-        const messageInputEl = document.getElementById('messageInput');
+    async function sendMessage() {
+        const userId = Number(document.getElementById('userId').value);
+        const chatId = document.getElementById('chatId').value.trim();
+        const message = document.getElementById('message').value.trim();
 
-        function createChatId() { return 'chat-' + Date.now(); }
-        function escapeHtml(text) {
-            return (text || '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+        if (!userId) {
+            alert('请填写 userId');
+            return;
+        }
+        if (!chatId) {
+            alert('请填写 chatId');
+            return;
+        }
+        if (!message) {
+            alert('请输入消息');
+            return;
         }
 
-        function renderSessions() {
-            if (!sessionListData.length) {
-                sessionListEl.innerHTML = '<div style="padding:16px;color:#bbb;">暂无历史会话</div>';
-                return;
-            }
-            sessionListEl.innerHTML = sessionListData.map(item => `
-      <div class="session-item ${item.chatId === currentChatId ? 'active' : ''}" data-chat-id="${item.chatId}">
-        <div class="session-title">${escapeHtml(item.title || '新对话')}</div>
-        <div class="session-last">${escapeHtml(item.lastMessage || '')}</div>
-      </div>
-    `).join('');
-            document.querySelectorAll('.session-item').forEach(el => {
-                el.addEventListener('click', async () => {
-                    currentChatId = el.dataset.chatId;
-                    renderSessions();
-                    await loadMessages(currentChatId);
-                });
-            });
-        }
+        appendMessage('user', message);
+        document.getElementById('message').value = '';
 
-        function renderMessages(messages) {
-            if (!messages || !messages.length) {
-                chatScrollEl.innerHTML = '<div class="empty-tip">当前会话还没有消息。</div>';
-                return;
-            }
-            chatScrollEl.innerHTML = messages.map(msg => `
-      <div class="msg-row ${msg.senderType === 'USER' ? 'user' : 'assistant'}">
-        <div class="msg-bubble">${escapeHtml(msg.content)}</div>
-      </div>
-    `).join('');
-            chatScrollEl.scrollTop = chatScrollEl.scrollHeight;
-        }
-
-        async function loadSessions() {
-            const res = await get(`/chat/session/list?userId=${currentUser.userId}&role=${currentUser.role}`);
-            sessionListData = res.data || [];
-            renderSessions();
-        }
-
-        async function loadMessages(chatId) {
-            currentChatLabelEl.innerText = `当前会话：${chatId}`;
-            const res = await get(`/chat/session/messages?chatId=${chatId}&userId=${currentUser.userId}`);
-            renderMessages(res.data || []);
-        }
-
-        async function sendMessage(messageText) {
-            const message = (messageText ?? messageInputEl.value).trim();
-            if (!message) {
-                layer.msg('请输入内容');
-                return;
-            }
-
-            if (!currentChatId) {
-                currentChatId = createChatId();
-                currentChatLabelEl.innerText = `当前会话：${currentChatId}`;
-            }
-
-            messageInputEl.value = '';
-            const existing = chatScrollEl.querySelector('.empty-tip');
-            if (existing) chatScrollEl.innerHTML = '';
-
-            chatScrollEl.innerHTML += `
-      <div class="msg-row user"><div class="msg-bubble">${escapeHtml(message)}</div></div>
-      <div class="msg-row assistant" id="assistant-loading"><div class="msg-bubble">处理中，请稍候...</div></div>
-    `;
-            chatScrollEl.scrollTop = chatScrollEl.scrollHeight;
-
-            try {
-                const body = {
-                    chatId: currentChatId,
-                    userId: currentUser.userId,
-                    tenantId: currentUser.tenantId,
-                    role: currentUser.role,
+        try {
+            const res = await fetch('/ai/hr/chat/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chatId,
+                    userId,
+                    tenantId: 'default',
+                    role: 'HR',
                     message
-                };
-                const result = await post('/ai/hr/chat/sync', body);
-                const loadingEl = document.getElementById('assistant-loading');
-                if (loadingEl) {
-                    loadingEl.outerHTML = `<div class="msg-row assistant"><div class="msg-bubble">${escapeHtml(result)}</div></div>`;
-                }
-                await loadSessions();
-            } catch (e) {
-                const loadingEl = document.getElementById('assistant-loading');
-                if (loadingEl) {
-                    loadingEl.outerHTML = `<div class="msg-row assistant"><div class="msg-bubble">请求失败：${escapeHtml(e.message)}</div></div>`;
-                }
-            }
-            chatScrollEl.scrollTop = chatScrollEl.scrollHeight;
+                })
+            });
+            const text = await res.text();
+            appendMessage('assistant', text || '系统未返回内容');
+        } catch (e) {
+            appendMessage('assistant', '请求失败：' + e.message);
         }
-
-        document.getElementById('newChatBtn').addEventListener('click', function () {
-            currentChatId = createChatId();
-            currentChatLabelEl.innerText = `当前会话：${currentChatId}`;
-            chatScrollEl.innerHTML = '<div class="empty-tip">新会话已创建，现在可以开始聊天。</div>';
-            renderSessions();
-        });
-
-        document.getElementById('sendBtn').addEventListener('click', () => sendMessage());
-        messageInputEl.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') sendMessage();
-        });
-
-        document.querySelectorAll('.quick-question').forEach(btn => {
-            btn.addEventListener('click', () => sendMessage(btn.dataset.question));
-        });
-
-        loadSessions();
-    });
+    }
 </script>
 </body>
 </html>

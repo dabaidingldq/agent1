@@ -75,103 +75,20 @@ public class ApprovalManageService {
                   AND (? IS NULL OR ? = '' OR ai.business_type = ?)
                 """;
 
-        Object[] args;
+        Object[] args = new Object[]{businessType, businessType, businessType};
 
         if (role == ChatRole.ADMIN) {
             sql += " ORDER BY ai.id DESC LIMIT 200";
-            args = new Object[]{businessType, businessType, businessType};
         } else {
             sql += """
                     AND (
-                        (ai.business_type = 'LEAVE' AND ai.current_node IN ('HR审批', 'HR审批'))
+                        (ai.business_type = 'LEAVE' AND ai.current_node IN ('直属经理审批', 'HR审批'))
                         OR (ai.business_type = 'CERTIFICATE' AND ai.current_node IN ('HR复核', 'HR审批'))
-                        OR (ai.business_type = 'OFFICE_SUPPLY' AND ai.current_node IN ('HR审批', 'HR审批'))
+                        OR (ai.business_type = 'OFFICE_SUPPLY' AND ai.current_node IN ('行政审批', 'HR审批'))
                     )
                     ORDER BY ai.id DESC
                     LIMIT 200
                     """;
-            args = new Object[]{businessType, businessType, businessType};
-        }
-
-        return jdbcTemplate.query(sql, (rs, rowNum) -> new ApprovalManageItem(
-                rs.getLong("id"),
-                rs.getLong("applicant_user_id"),
-                rs.getString("employee_name"),
-                rs.getString("business_type"),
-                rs.getString("status"),
-                rs.getString("current_node"),
-                rs.getString("detail_summary"),
-                toLocalDateTime(rs.getTimestamp("created_at"))
-        ), args);
-    }
-
-    public List<ApprovalManageItem> queryAllApprovals(String businessType, String status) {
-        permissionService.requireHrOrAdmin();
-        ChatRole role = permissionService.currentRole();
-
-        String sql = """
-                SELECT
-                    ai.id,
-                    ai.applicant_user_id,
-                    COALESCE(ep.employee_name, CONCAT('用户', ai.applicant_user_id)) AS employee_name,
-                    ai.business_type,
-                    ai.status,
-                    ai.current_node,
-                    ai.created_at,
-                    CASE
-                        WHEN ai.business_type = 'LEAVE' THEN (
-                            SELECT CONCAT(
-                                COALESCE(l.leave_type, ''),
-                                ' ',
-                                DATE_FORMAT(l.start_time, '%%m-%%d %%H:%%i'),
-                                ' ~ ',
-                                DATE_FORMAT(l.end_time, '%%m-%%d %%H:%%i')
-                            )
-                            FROM leave_request l
-                            WHERE l.user_id = ai.applicant_user_id
-                            ORDER BY l.id DESC
-                            LIMIT 1
-                        )
-                        WHEN ai.business_type = 'CERTIFICATE' THEN (
-                            SELECT CONCAT(
-                                COALESCE(c.certificate_type, ''),
-                                ' / ',
-                                COALESCE(c.purpose, '')
-                            )
-                            FROM certificate_request c
-                            WHERE c.user_id = ai.applicant_user_id
-                            ORDER BY c.id DESC
-                            LIMIT 1
-                        )
-                        WHEN ai.business_type = 'OFFICE_SUPPLY' THEN (
-                            SELECT LEFT(COALESCE(o.item_description, ''), 120)
-                            FROM office_supply_order o
-                            WHERE o.user_id = ai.applicant_user_id
-                            ORDER BY o.id DESC
-                            LIMIT 1
-                        )
-                        ELSE ''
-                    END AS detail_summary
-                FROM approval_instance ai
-                LEFT JOIN employee_profile ep ON ep.user_id = ai.applicant_user_id
-                WHERE (? IS NULL OR ? = '' OR ai.business_type = ?)
-                  AND (? IS NULL OR ? = '' OR ai.status = ?)
-                """;
-
-        Object[] args;
-
-        if (role == ChatRole.ADMIN) {
-            sql += " ORDER BY ai.id DESC LIMIT 300";
-            args = new Object[]{businessType, businessType, businessType, status, status, status};
-        } else {
-            sql += """
-                    AND (
-                        ai.business_type IN ('LEAVE', 'CERTIFICATE', 'OFFICE_SUPPLY')
-                    )
-                    ORDER BY ai.id DESC
-                    LIMIT 300
-                    """;
-            args = new Object[]{businessType, businessType, businessType, status, status, status};
         }
 
         return jdbcTemplate.query(sql, (rs, rowNum) -> new ApprovalManageItem(
@@ -192,6 +109,36 @@ public class ApprovalManageService {
 
     public String rejectApproval(Long approvalId, String comment) {
         return handleApproval(approvalId, "REJECTED", "已驳回", comment);
+    }
+
+    public String getApprovalSummary(Long approvalId) {
+        permissionService.requireHrOrAdmin();
+        return jdbcTemplate.query("""
+                SELECT
+                    ai.id,
+                    ai.applicant_user_id,
+                    COALESCE(ep.employee_name, CONCAT('用户', ai.applicant_user_id)) AS employee_name,
+                    ai.business_type,
+                    ai.status,
+                    ai.current_node,
+                    ai.created_at
+                FROM approval_instance ai
+                LEFT JOIN employee_profile ep ON ep.user_id = ai.applicant_user_id
+                WHERE ai.id = ?
+                LIMIT 1
+                """, rs -> {
+            if (!rs.next()) {
+                return "未找到审批单 #" + approvalId;
+            }
+            return ("审批单详情：\n" +
+                    "- approvalId: " + rs.getLong("id") + "\n" +
+                    "- applicantUserId: " + rs.getLong("applicant_user_id") + "\n" +
+                    "- employeeName: " + rs.getString("employee_name") + "\n" +
+                    "- businessType: " + rs.getString("business_type") + "\n" +
+                    "- status: " + rs.getString("status") + "\n" +
+                    "- currentNode: " + rs.getString("current_node") + "\n" +
+                    "- createdAt: " + rs.getTimestamp("created_at"));
+        }, approvalId);
     }
 
     private String handleApproval(Long approvalId, String targetStatus, String targetNode, String comment) {
@@ -238,7 +185,7 @@ public class ApprovalManageService {
         syncBusinessStatus(row.applicantUserId(), row.businessType(), targetStatus);
 
         String suffix = (comment == null || comment.isBlank()) ? "" : ("，备注：" + comment.trim());
-        return "APPROVAL_SUCCESS: #" + approvalId + " 已更新为 " + targetStatus + suffix;
+        return "审批单 #" + approvalId + " 已更新为 " + targetStatus + suffix;
     }
 
     private void requireCanHandle(String businessType, String currentNode) {

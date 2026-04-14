@@ -129,7 +129,7 @@
 
     <div class="card">
         <h2 class="section-title">审批备注</h2>
-        <textarea id="comment" placeholder="可填写审批备注。当前后端会回传备注，但不会落库存档。"></textarea>
+        <textarea id="comment" placeholder="可填写审批备注。"></textarea>
     </div>
 
     <div class="card">
@@ -213,8 +213,13 @@
                 <td>${formatTime(row.createdAt)}</td>
                 <td>
                     <div class="row-actions">
-                        <button class="success" onclick="handleApproval(${row.id}, 'approve')">通过</button>
-                        <button class="danger" onclick="handleApproval(${row.id}, 'reject')">驳回</button>
+                        ${(row.status === 'PENDING' || row.status === 'PENDING_REVIEW')
+            ? `
+                              <button class="success" onclick="handleApproval(${row.id}, 'approve')">通过</button>
+                              <button class="danger" onclick="handleApproval(${row.id}, 'reject')">驳回</button>
+                              `
+            : '<span class="muted">已处理</span>'
+        }
                     </div>
                 </td>
             </tr>
