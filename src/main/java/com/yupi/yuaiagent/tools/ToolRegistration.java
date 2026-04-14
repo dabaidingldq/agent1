@@ -1,0 +1,84 @@
+package com.yupi.yuaiagent.tools;
+
+import org.springframework.ai.support.ToolCallbacks;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class ToolRegistration {
+
+    @Bean("employeeTools")
+    public ToolCallback[] employeeTools(
+            LeaveTool leaveTool,
+            OfficeSupplyTool officeSupplyTool,
+            ApprovalTool approvalTool,
+            ApprovalHistoryTool approvalHistoryTool,
+            ProfileTool profileTool,
+            CertificateTool certificateTool,
+            DashboardTool dashboardTool,
+            ExpenseTool expenseTool,
+            MeetingRoomTool meetingRoomTool,
+            VisitorTool visitorTool
+    ) {
+        return ToolCallbacks.from(
+                leaveTool,
+                officeSupplyTool,
+                approvalTool,
+                approvalHistoryTool,
+                profileTool,
+                certificateTool,
+                dashboardTool,
+                expenseTool,
+                meetingRoomTool,
+                visitorTool
+        );
+    }
+
+    @Bean("hrTools")
+    public ToolCallback[] hrTools(
+            LeaveTool leaveTool,
+            ApprovalTool approvalTool,
+            ApprovalHistoryTool approvalHistoryTool,
+            CertificateTool certificateTool,
+            AnnouncementTool announcementTool,
+            DashboardTool dashboardTool,
+            TeamAnalyticsTool teamAnalyticsTool,
+            ExpenseTool expenseTool,
+            MeetingRoomTool meetingRoomTool,
+            VisitorTool visitorTool
+    ) {
+        return ToolCallbacks.from(
+                leaveTool,
+                approvalTool,
+                approvalHistoryTool,
+                certificateTool,
+                announcementTool,
+                dashboardTool,
+                teamAnalyticsTool,
+                expenseTool,
+                meetingRoomTool,
+                visitorTool
+        );
+    }
+    @Bean("adminTools")
+    public ToolCallback[] adminTools(
+            ApprovalTool approvalTool,
+            ApprovalHistoryTool approvalHistoryTool,
+            DashboardTool dashboardTool,
+            AnnouncementTool announcementTool,
+            KnowledgeAdminTool knowledgeAdminTool,
+            BudgetTool budgetTool,
+            TeamAnalyticsTool teamAnalyticsTool
+    ) {
+        return ToolCallbacks.from(
+                approvalTool,
+                approvalHistoryTool,
+                dashboardTool,
+                announcementTool,
+                knowledgeAdminTool,
+                budgetTool,
+                teamAnalyticsTool
+        );
+    }
+}

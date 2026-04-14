@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>管理员端 - 预算管理</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://unpkg.com/layui@2.13.4/dist/css/layui.css" rel="stylesheet">
+    <link href="../assets/css/common.css" rel="stylesheet">
+</head>
+<body>
+<div class="page-container">
+    <div class="page-card flex-between">
+        <h2 class="layui-font-20">成本中心预算管理</h2>
+        <span class="layui-badge layui-bg-black">ADMIN</span>
+    </div>
+
+    <div class="layui-row layui-col-space16">
+        <div class="layui-col-md5">
+            <div class="page-card">
+                <h3 class="layui-font-18">预算查询</h3>
+                <div class="layui-form" style="margin-top: 16px;">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">成本中心</label>
+                        <div class="layui-input-block">
+                            <input type="text" id="costCenterInput" class="layui-input" value="HR-OPS">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <button class="layui-btn" id="queryBudgetBtn">查询</button>
+                    </div>
+                </div>
+
+                <div class="layui-bg-gray" style="padding:16px; border-radius:8px;">
+                    <p><strong>成本中心：</strong><span id="budgetCostCenter">--</span></p>
+                    <p><strong>总预算：</strong><span id="budgetTotal">--</span></p>
+                    <p><strong>已用预算：</strong><span id="budgetUsed">--</span></p>
+                    <p><strong>使用率：</strong><span id="budgetRate">--</span></p>
+                    <p><strong>是否预警：</strong><span id="budgetWarning">--</span></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="layui-col-md7">
+            <div class="page-card">
+                <h3 class="layui-font-18">预算更新</h3>
+                <div class="layui-form" style="margin-top: 16px;">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">成本中心</label>
+                        <div class="layui-input-block">
+                            <input type="text" id="updateCostCenter" class="layui-input" value="HR-OPS">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">增加金额</label>
+                        <div class="layui-input-block">
+                            <input type="number" id="updateAmount" class="layui-input" value="100">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <button class="layui-btn layui-btn-danger" id="updateBudgetBtn">更新预算使用额</button>
+                    </div>
+                </div>
+
+                <div class="layui-text">
+                    <p>当前页面依赖管理员预算接口。</p>
+                    <p>如果你还没补显式 REST 接口，可以先通过聊天接口让管理员执行预算查询与更新。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/layui@2.13.4/dist/layui.js"></script>
+<script src="../assets/js/config.js"></script>
+<script src="../assets/js/request.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script>
+    layui.use(['layer'], function () {
+        const layer = layui.layer;
+        setCurrentUser({
+            userId: 9001,
+            role: 'ADMIN',
+            displayName: '管理员'
+        });
+        const currentUser = getCurrentUser();
+
+        async function queryBudget() {
+            const costCenter = document.getElementById('costCenterInput').value || 'HR-OPS';
+            try {
+                const res = await get(`/admin/budget/usage?userId=${currentUser.userId}&costCenter=${encodeURIComponent(costCenter)}`);
+                const data = res.data;
+                document.getElementById('budgetCostCenter').innerText = data.costCenter;
+                document.getElementById('budgetTotal').innerText = data.totalBudget;
+                document.getElementById('budgetUsed').innerText = data.usedBudget;
+                document.getElementById('budgetRate').innerText = `${data.usageRate}%`;
+                document.getElementById('budgetWarning').innerText = data.warning ? '是' : '否';
+            } catch (e) {
+                layer.msg('预算查询接口未接好，尝试走聊天查询');
+                try {
+                    const body = {
+                        chatId: `chat-budget-${Date.now()}`,
+                        userId: currentUser.userId,
+                        tenantId: currentUser.tenantId,
+                        role: currentUser.role,
+                        message: `查询 ${costCenter} 成本中心预算使用情况`
+                    };
+                    const result = await post('/ai/admin/chat/sync', body);
+                    layer.open({
+                        type: 1,
+                        area: ['680px', '420px'],
+                        title: '预算查询结果',
+                        content: `<div style="padding:16px; white-space:pre-wrap; line-height:1.8;">${result}</div>`
+                    });
+                } catch (err) {
+                    layer.msg(`查询失败：${err.message}`);
+                }
+            }
+        }
+
+        async function updateBudget() {
+            const costCenter = document.getElementById('updateCostCenter').value || 'HR-OPS';
+            const amount = document.getElementById('updateAmount').value || '0';
+            try {
+                const body = {
+                    chatId: `chat-budget-update-${Date.now()}`,
+                    userId: currentUser.userId,
+                    tenantId: currentUser.tenantId,
+                    role: currentUser.role,
+                    message: `给 ${costCenter} 成本中心增加预算使用金额 ${amount}`
+                };
+                const result = await post('/ai/admin/chat/sync', body);
+                layer.alert(result);
+                queryBudget();
+            } catch (e) {
+                layer.msg(`更新失败：${e.message}`);
+            }
+        }
+
+        document.getElementById('queryBudgetBtn').addEventListener('click', queryBudget);
+        document.getElementById('updateBudgetBtn').addEventListener('click', updateBudget);
+
+        queryBudget();
+    });
+</script>
+</body>
+</html>

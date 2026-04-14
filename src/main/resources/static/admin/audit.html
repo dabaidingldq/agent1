@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>管理员端 - 审计日志</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://unpkg.com/layui@2.13.4/dist/css/layui.css" rel="stylesheet">
+    <link href="../assets/css/common.css" rel="stylesheet">
+</head>
+<body>
+<div class="page-container">
+    <div class="page-card flex-between">
+        <h2 class="layui-font-20">审计日志</h2>
+        <div style="display:flex; gap:8px;">
+            <input type="number" id="logLimit" class="layui-input" value="20" min="1" max="100" style="width:100px;">
+            <button class="layui-btn" id="loadLogsBtn">刷新日志</button>
+        </div>
+    </div>
+
+    <div class="page-card">
+        <table class="layui-hide" id="auditTable"></table>
+    </div>
+</div>
+
+<script src="https://unpkg.com/layui@2.13.4/dist/layui.js"></script>
+<script src="../assets/js/config.js"></script>
+<script src="../assets/js/request.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script>
+    layui.use(['table', 'layer'], function () {
+        const table = layui.table;
+        const layer = layui.layer;
+
+        setCurrentUser({
+            userId: 9001,
+            role: 'ADMIN',
+            displayName: '管理员'
+        });
+        const currentUser = getCurrentUser();
+
+        async function loadLogs() {
+            const limit = document.getElementById('logLimit').value || 20;
+            try {
+                const res = await get(`/admin/audit/latest?userId=${currentUser.userId}&limit=${limit}`);
+                table.render({
+                    elem: '#auditTable',
+                    data: res.data || [],
+                    page: false,
+                    cols: [[
+                        { field: 'id', title: 'ID', width: 80 },
+                        { field: 'userId', title: '用户 ID', width: 100 },
+                        { field: 'roleName', title: '角色', width: 100 },
+                        { field: 'operationName', title: '操作名称', width: 160 },
+                        { field: 'operationModule', title: '模块', width: 120 },
+                        { field: 'resultSummary', title: '结果摘要', minWidth: 260 },
+                        { field: 'successFlag', title: '成功', width: 100, templet: d => d.successFlag ? '是' : '否' },
+                        { field: 'createdAt', title: '时间', minWidth: 180 }
+                    ]]
+                });
+            } catch (e) {
+                table.render({
+                    elem: '#auditTable',
+                    data: [],
+                    cols: [[
+                        { field: 'id', title: 'ID', width: 80 },
+                        { field: 'userId', title: '用户 ID', width: 100 },
+                        { field: 'roleName', title: '角色', width: 100 },
+                        { field: 'operationName', title: '操作名称', width: 160 },
+                        { field: 'operationModule', title: '模块', width: 120 },
+                        { field: 'resultSummary', title: '结果摘要', minWidth: 260 },
+                        { field: 'successFlag', title: '成功', width: 100, templet: d => d.successFlag ? '是' : '否' },
+                        { field: 'createdAt', title: '时间', minWidth: 180 }
+                    ]]
+                });
+                layer.msg('审计日志接口未接好或暂无数据');
+            }
+        }
+
+        document.getElementById('loadLogsBtn').addEventListener('click', loadLogs);
+
+        loadLogs();
+    });
+</script>
+</body>
+</html>

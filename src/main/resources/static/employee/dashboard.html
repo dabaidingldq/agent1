@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>员工端 - 个人看板</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://unpkg.com/layui@2.13.4/dist/css/layui.css" rel="stylesheet">
+    <link href="../assets/css/common.css" rel="stylesheet">
+</head>
+<body>
+<div class="page-container">
+    <div class="page-card">
+        <div class="flex-between">
+            <h2 class="layui-font-20">个人数据看板</h2>
+            <a class="layui-btn layui-btn-primary" href="./chat.html">返回聊天</a>
+        </div>
+    </div>
+
+    <div class="layui-row layui-col-space16">
+        <div class="layui-col-md3">
+            <div class="page-card">
+                <div>年假使用率</div>
+                <div class="stat-number" id="leaveUsageRate">--</div>
+            </div>
+        </div>
+        <div class="layui-col-md3">
+            <div class="page-card">
+                <div>本月加班时长</div>
+                <div class="stat-number" id="monthlyOvertime">--</div>
+            </div>
+        </div>
+        <div class="layui-col-md3">
+            <div class="page-card">
+                <div>待审批数量</div>
+                <div class="stat-number" id="pendingApprovals">--</div>
+            </div>
+        </div>
+        <div class="layui-col-md3">
+            <div class="page-card">
+                <div>待办任务数</div>
+                <div class="stat-number" id="pendingTasks">--</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/layui@2.13.4/dist/layui.js"></script>
+<script src="../assets/js/config.js"></script>
+<script src="../assets/js/request.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script>
+    layui.use(['layer'], function () {
+        const layer = layui.layer;
+        const currentUser = getCurrentUser();
+
+        async function loadDashboard() {
+            try {
+                const res = await get(`/employee/dashboard?userId=${currentUser.userId}`);
+                const data = res.data;
+                document.getElementById('leaveUsageRate').innerText = `${data.annualLeaveUsageRate}%`;
+                document.getElementById('monthlyOvertime').innerText = `${data.monthlyOvertimeHours}h`;
+                document.getElementById('pendingApprovals').innerText = data.pendingApprovals;
+                document.getElementById('pendingTasks').innerText = data.pendingTasks;
+            } catch (e) {
+                layer.msg(`加载失败：${e.message}`);
+            }
+        }
+
+        loadDashboard();
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>员工端 - 我的申请</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://unpkg.com/layui@2.13.4/dist/css/layui.css" rel="stylesheet">
+    <link href="../assets/css/common.css" rel="stylesheet">
+</head>
+<body>
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo layui-hide-xs layui-bg-black">员工端 HR 助手</div>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item"><a href="./chat.html">智能助手</a></li>
+            <li class="layui-nav-item"><a href="./approvals.html">审批进度</a></li>
+        </ul>
+    </div>
+
+    <div class="layui-side layui-bg-black">
+        <div class="side-menu-title">员工菜单</div>
+        <ul class="layui-nav layui-nav-tree layui-bg-black">
+            <li class="layui-nav-item"><a href="./chat.html">智能助手</a></li>
+            <li class="layui-nav-item layui-this"><a href="./applications.html">我的申请</a></li>
+            <li class="layui-nav-item"><a href="./approvals.html">审批进度</a></li>
+            <li class="layui-nav-item"><a href="./dashboard.html">个人看板</a></li>
+            <li class="layui-nav-item"><a href="./notifications.html">消息中心</a></li>
+        </ul>
+    </div>
+
+    <div class="layui-body">
+        <div class="page-container">
+            <div class="page-card">
+                <h2 class="layui-font-20">我的申请</h2>
+                <div class="layui-text" style="margin-top: 8px;">
+                    当前页面先提供快捷发起入口，后续你可以再补真实列表接口。
+                </div>
+            </div>
+
+            <div class="layui-row layui-col-space16">
+                <div class="layui-col-md4">
+                    <div class="page-card">
+                        <h3 class="layui-font-18">请假申请</h3>
+                        <p style="margin: 12px 0;">快速发起请假相关请求。</p>
+                        <button class="layui-btn layui-btn-fluid apply-btn" data-question="帮我请本周五下午半天事假，原因是家里有事">立即发起</button>
+                    </div>
+                </div>
+                <div class="layui-col-md4">
+                    <div class="page-card">
+                        <h3 class="layui-font-18">办公用品申请</h3>
+                        <p style="margin: 12px 0;">申请黑笔、笔记本等日常用品。</p>
+                        <button class="layui-btn layui-btn-fluid apply-btn" data-question="帮我申请两支黑色签字笔和一个笔记本">立即发起</button>
+                    </div>
+                </div>
+                <div class="layui-col-md4">
+                    <div class="page-card">
+                        <h3 class="layui-font-18">证明申请</h3>
+                        <p style="margin: 12px 0;">在职证明、收入证明、实习证明。</p>
+                        <button class="layui-btn layui-btn-fluid apply-btn" data-question="帮我开一个在职证明，租房要用">立即发起</button>
+                    </div>
+                </div>
+                <div class="layui-col-md4">
+                    <div class="page-card">
+                        <h3 class="layui-font-18">报销草稿</h3>
+                        <p style="margin: 12px 0;">创建报销单草稿。</p>
+                        <button class="layui-btn layui-btn-fluid apply-btn" data-question="帮我创建一个报销草稿，金额128.5，发票抬头是某某科技有限公司，类型是交通费，备注打车报销">立即发起</button>
+                    </div>
+                </div>
+                <div class="layui-col-md4">
+                    <div class="page-card">
+                        <h3 class="layui-font-18">会议室预约</h3>
+                        <p style="margin: 12px 0;">预约会议室或面试间。</p>
+                        <button class="layui-btn layui-btn-fluid apply-btn" data-question="帮我预约明天下午3点到4点的面试间A，用于技术面试">立即发起</button>
+                    </div>
+                </div>
+                <div class="layui-col-md4">
+                    <div class="page-card">
+                        <h3 class="layui-font-18">访客申请</h3>
+                        <p style="margin: 12px 0;">访客来访与门禁申请。</p>
+                        <button class="layui-btn layui-btn-fluid apply-btn" data-question="帮我申请一个访客预约，访客叫王五，手机号13700000000，明天来访，原因是商务来访">立即发起</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="page-card">
+                <h3 class="layui-font-18">处理结果</h3>
+                <div id="resultBox" class="layui-bg-gray" style="min-height: 180px; padding: 16px; border-radius: 8px; white-space: pre-wrap;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/layui@2.13.4/dist/layui.js"></script>
+<script src="../assets/js/config.js"></script>
+<script src="../assets/js/request.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script>
+    layui.use(['layer'], function () {
+        const layer = layui.layer;
+        const currentUser = getCurrentUser();
+        const resultBox = document.getElementById('resultBox');
+
+        async function doApply(question) {
+            try {
+                resultBox.innerText = '处理中...';
+                const body = {
+                    chatId: `chat-apply-${Date.now()}`,
+                    userId: currentUser.userId,
+                    tenantId: currentUser.tenantId,
+                    role: currentUser.role,
+                    message: question
+                };
+                const res = await post('/ai/employee/chat/sync', body);
+                resultBox.innerText = res;
+            } catch (e) {
+                resultBox.innerText = `请求失败：${e.message}`;
+                layer.msg('请求失败');
+            }
+        }
+
+        document.querySelectorAll('.apply-btn').forEach(btn => {
+            btn.addEventListener('click', () => doApply(btn.dataset.question));
+        });
+    });
+</script>
+</body>
+</html>

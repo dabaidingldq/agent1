@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>管理员端 - 知识库管理</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://unpkg.com/layui@2.13.4/dist/css/layui.css" rel="stylesheet">
+    <link href="../assets/css/common.css" rel="stylesheet">
+</head>
+<body>
+<div class="page-container">
+    <div class="page-card flex-between">
+        <h2 class="layui-font-20">知识库管理</h2>
+        <span class="layui-badge layui-bg-black">ADMIN</span>
+    </div>
+
+    <div class="layui-row layui-col-space16">
+        <div class="layui-col-md4">
+            <div class="page-card">
+                <h3 class="layui-font-18">知识库统计</h3>
+                <div style="margin-top: 16px;">
+                    <div>当前向量条数</div>
+                    <div class="stat-number" id="knowledgeCount">--</div>
+                </div>
+                <div style="margin-top: 16px;">
+                    <button class="layui-btn" id="refreshCountBtn">刷新统计</button>
+                    <button class="layui-btn layui-btn-danger" id="rebuildBtn">重建知识库</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="layui-col-md8">
+            <div class="page-card">
+                <div class="flex-between">
+                    <h3 class="layui-font-18">知识检索调试</h3>
+                    <button class="layui-btn layui-btn-primary" id="searchBtn">查询</button>
+                </div>
+
+                <div class="layui-form" style="margin-top: 16px;">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">查询词</label>
+                        <div class="layui-input-block">
+                            <input type="text" id="queryInput" class="layui-input" value="育儿假">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">topic</label>
+                        <div class="layui-input-block">
+                            <input type="text" id="topicInput" class="layui-input" value="leave">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">docType</label>
+                        <div class="layui-input-block">
+                            <input type="text" id="docTypeInput" class="layui-input" placeholder="可留空，例如 policy">
+                        </div>
+                    </div>
+                </div>
+
+                <table class="layui-hide" id="knowledgeTable"></table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/layui@2.13.4/dist/layui.js"></script>
+<script src="../assets/js/config.js"></script>
+<script src="../assets/js/request.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script>
+    layui.use(['table', 'layer'], function () {
+        const table = layui.table;
+        const layer = layui.layer;
+        setCurrentUser({
+            userId: 9001,
+            role: 'ADMIN',
+            displayName: '管理员'
+        });
+        const currentUser = getCurrentUser();
+
+        async function loadCount() {
+            try {
+                const res = await get(`/admin/knowledge/count?userId=${currentUser.userId}`);
+                document.getElementById('knowledgeCount').innerText = res.data;
+            } catch (e) {
+                document.getElementById('knowledgeCount').innerText = '--';
+                layer.msg('知识库统计接口未接好');
+            }
+        }
+
+        async function rebuildKnowledge() {
+            layer.confirm('确认重建知识库吗？', async function (index) {
+                try {
+                    const res = await post(`/admin/knowledge/rebuild?userId=${currentUser.userId}`);
+                    layer.alert(res.data || '重建完成');
+                    await loadCount();
+                } catch (e) {
+                    layer.msg(`重建失败：${e.message}`);
+                }
+                layer.close(index);
+            });
+        }
+
+        async function searchKnowledge() {
+            const query = document.getElementById('queryInput').value || '';
+            const topic = document.getElementById('topicInput').value || '';
+            const docType = document.getElementById('docTypeInput').value || '';
+
+            let url = `/debug/knowledge/search?query=${encodeURIComponent(query)}`;
+            if (topic) url += `&topic=${encodeURIComponent(topic)}`;
+            if (docType) url += `&docType=${encodeURIComponent(docType)}`;
+
+            try {
+                const rows = await get(url);
+                table.render({
+                    elem: '#knowledgeTable',
+                    data: rows || [],
+                    cols: [[
+                        { field: 'text', title: '文本内容', minWidth: 360, templet: d => (d.text || '').substring(0, 150) },
+                        { field: 'metadata', title: '元数据', minWidth: 280, templet: d => JSON.stringify(d.metadata || {}) }
+                    ]]
+                });
+            } catch (e) {
+                layer.msg(`查询失败：${e.message}`);
+            }
+        }
+
+        document.getElementById('refreshCountBtn').addEventListener('click', loadCount);
+        document.getElementById('rebuildBtn').addEventListener('click', rebuildKnowledge);
+        document.getElementById('searchBtn').addEventListener('click', searchKnowledge);
+
+        loadCount();
+    });
+</script>
+</body>
+</html>

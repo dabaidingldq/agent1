@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: yu-ai-agent
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/aiagent?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  ai:
+    chat:
+      memory:
+        repository:
+          jdbc:
+            initialize-schema: never
+    dashscope:
+      api-key: sk-77b0957d46874afbb8056a0a323dbf36
+      chat:
+        options:
+          model: qwen-plus
+
+  sql:
+    init:
+      mode: never
+
+server:
+  port: 8123
+
+logging:
+  level:
+    org.springframework.ai: info
+    com.yupi.yuaiagent: debug
+
+hr:
+  knowledge:
+    auto-init: true
+    rebuild-on-startup: false
+    top-k: 6
+    similarity-threshold: 0.65
+
+pgvector:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/yu_ai_agent
+    username: ldq
+    password: 123456
+    driver-class-name: org.postgresql.Driver

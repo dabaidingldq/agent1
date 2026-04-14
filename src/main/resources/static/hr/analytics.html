@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>HR 端 - 团队分析</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://unpkg.com/layui@2.13.4/dist/css/layui.css" rel="stylesheet">
+    <link href="../assets/css/common.css" rel="stylesheet">
+</head>
+<body>
+<div class="page-container">
+    <div class="page-card flex-between">
+        <h2 class="layui-font-20">团队分析</h2>
+        <a class="layui-btn" href="./chat.html">返回 HR 助手</a>
+    </div>
+
+    <div class="layui-row layui-col-space16">
+        <div class="layui-col-md6">
+            <div class="page-card">
+                <div class="flex-between">
+                    <h3 class="layui-font-18">团队加班排行</h3>
+                    <div style="display:flex; gap:8px;">
+                        <input type="number" class="layui-input" id="topLimit" value="5" min="1" max="20" style="width:100px;">
+                        <button class="layui-btn layui-btn-primary" id="loadTopBtn">查询</button>
+                    </div>
+                </div>
+                <table class="layui-hide" id="overtimeTable"></table>
+            </div>
+        </div>
+
+        <div class="layui-col-md6">
+            <div class="page-card">
+                <div class="flex-between">
+                    <h3 class="layui-font-18">团队历史审批</h3>
+                    <div style="display:flex; gap:8px;">
+                        <select id="teamBusinessType" class="layui-input" style="width:160px;">
+                            <option value="">全部</option>
+                            <option value="LEAVE">请假</option>
+                            <option value="OFFICE_SUPPLY">办公用品</option>
+                            <option value="CERTIFICATE">证明开具</option>
+                        </select>
+                        <input type="month" id="teamMonth" class="layui-input" style="width:180px;">
+                        <button class="layui-btn layui-btn-primary" id="loadTeamHistoryBtn">查询</button>
+                    </div>
+                </div>
+                <table class="layui-hide" id="teamHistoryTable"></table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/layui@2.13.4/dist/layui.js"></script>
+<script src="../assets/js/config.js"></script>
+<script src="../assets/js/request.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script>
+    layui.use(['table', 'layer'], function () {
+        const table = layui.table;
+        const layer = layui.layer;
+        setCurrentUser({
+            userId: 9001,
+            role: 'HR',
+            displayName: 'HR 用户'
+        });
+        const currentUser = getCurrentUser();
+
+        async function loadTop() {
+            const limit = document.getElementById('topLimit').value || 5;
+            try {
+                const res = await get(`/hr/analytics/overtime-top?userId=${currentUser.userId}&limit=${limit}`);
+                table.render({
+                    elem: '#overtimeTable',
+                    data: res.data || [],
+                    cols: [[
+                        { field: 'userId', title: '用户 ID', width: 100 },
+                        { field: 'employeeName', title: '员工姓名', width: 140 },
+                        { field: 'overtimeHours', title: '加班时长', width: 120 }
+                    ]]
+                });
+            } catch (e) {
+                table.render({
+                    elem: '#overtimeTable',
+                    data: [],
+                    cols: [[
+                        { field: 'userId', title: '用户 ID', width: 100 },
+                        { field: 'employeeName', title: '员工姓名', width: 140 },
+                        { field: 'overtimeHours', title: '加班时长', width: 120 }
+                    ]]
+                });
+                layer.msg('团队分析接口未接好或暂无数据');
+            }
+        }
+
+        async function loadTeamHistory() {
+            const businessType = document.getElementById('teamBusinessType').value || '';
+            const month = document.getElementById('teamMonth').value || '';
+            try {
+                const body = {
+                    chatId: `chat-team-history-${Date.now()}`,
+                    userId: currentUser.userId,
+                    tenantId: currentUser.tenantId,
+                    role: currentUser.role,
+                    message: `帮我查询团队 ${month || ''} ${businessType || ''} 的历史审批记录`
+                };
+                const result = await post('/ai/hr/chat/sync', body);
+                layer.open({
+                    type: 1,
+                    area: ['760px', '480px'],
+                    title: '团队历史审批查询结果',
+                    content: `<div style="padding:16px; white-space:pre-wrap; line-height:1.8;">${result}</div>`
+                });
+            } catch (e) {
+                layer.msg(`查询失败：${e.message}`);
+            }
+        }
+
+        document.getElementById('loadTopBtn').addEventListener('click', loadTop);
+        document.getElementById('loadTeamHistoryBtn').addEventListener('click', loadTeamHistory);
+
+        loadTop();
+    });
+</script>
+</body>
+</html>
