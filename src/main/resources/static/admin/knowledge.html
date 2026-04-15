@@ -1,136 +1,239 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>管理员端 - 知识库管理</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://unpkg.com/layui@2.13.4/dist/css/layui.css" rel="stylesheet">
-    <link href="../assets/css/common.css" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f5f7fb;
+            color: #111827;
+        }
+        .topbar {
+            background: #111827;
+            color: #fff;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .topbar a {
+            color: #93c5fd;
+            text-decoration: none;
+            margin-left: 16px;
+        }
+        .container {
+            max-width: 1280px;
+            margin: 24px auto;
+            padding: 0 16px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 14px;
+            padding: 18px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+            margin-bottom: 18px;
+        }
+        .section-title {
+            margin: 0 0 12px;
+            font-size: 18px;
+        }
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        input, select, textarea, button {
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+        input[type="file"] {
+            padding: 8px;
+            background: #fff;
+        }
+        textarea { min-height: 88px; width: 100%; }
+        button {
+            cursor: pointer;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+        }
+        button.secondary { background: #6b7280; }
+        .status-box {
+            margin-top: 10px;
+            color: #2563eb;
+            min-height: 20px;
+        }
+        .result-box {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 14px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            border: 1px solid #e5e7eb;
+        }
+        .stat-value {
+            font-size: 30px;
+            font-weight: 700;
+            color: #111827;
+            margin: 8px 0;
+        }
+        .muted {
+            color: #6b7280;
+            font-size: 13px;
+        }
+    </style>
 </head>
 <body>
-<div class="page-container">
-    <div class="page-card flex-between">
-        <h2 class="layui-font-20">知识库管理</h2>
-        <span class="layui-badge layui-bg-black">ADMIN</span>
-    </div>
-
-    <div class="layui-row layui-col-space16">
-        <div class="layui-col-md4">
-            <div class="page-card">
-                <h3 class="layui-font-18">知识库统计</h3>
-                <div style="margin-top: 16px;">
-                    <div>当前向量条数</div>
-                    <div class="stat-number" id="knowledgeCount">--</div>
-                </div>
-                <div style="margin-top: 16px;">
-                    <button class="layui-btn" id="refreshCountBtn">刷新统计</button>
-                    <button class="layui-btn layui-btn-danger" id="rebuildBtn">重建知识库</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="layui-col-md8">
-            <div class="page-card">
-                <div class="flex-between">
-                    <h3 class="layui-font-18">知识检索调试</h3>
-                    <button class="layui-btn layui-btn-primary" id="searchBtn">查询</button>
-                </div>
-
-                <div class="layui-form" style="margin-top: 16px;">
-                    <div class="layui-form-item">
-                        <label class="layui-form-label">查询词</label>
-                        <div class="layui-input-block">
-                            <input type="text" id="queryInput" class="layui-input" value="育儿假">
-                        </div>
-                    </div>
-                    <div class="layui-form-item">
-                        <label class="layui-form-label">topic</label>
-                        <div class="layui-input-block">
-                            <input type="text" id="topicInput" class="layui-input" value="leave">
-                        </div>
-                    </div>
-                    <div class="layui-form-item">
-                        <label class="layui-form-label">docType</label>
-                        <div class="layui-input-block">
-                            <input type="text" id="docTypeInput" class="layui-input" placeholder="可留空，例如 policy">
-                        </div>
-                    </div>
-                </div>
-
-                <table class="layui-hide" id="knowledgeTable"></table>
-            </div>
-        </div>
+<div class="topbar">
+    <div><strong>知识库管理</strong></div>
+    <div>
+        <a href="/admin/chat.html">返回管理员助手</a>
+        <a href="/admin/audit.html">审计日志</a>
     </div>
 </div>
 
-<script src="https://unpkg.com/layui@2.13.4/dist/layui.js"></script>
-<script src="../assets/js/config.js"></script>
-<script src="../assets/js/request.js"></script>
-<script src="../assets/js/auth.js"></script>
+<div class="container">
+    <div class="card">
+        <h2 class="section-title">基础信息</h2>
+        <div class="toolbar">
+            <label>管理员用户 ID：
+                <input id="userId" type="number" value="1" />
+            </label>
+            <button onclick="loadCount()">刷新统计</button>
+            <button class="secondary" onclick="rebuildKnowledge()">重建知识库</button>
+        </div>
+        <div class="stat-value" id="countValue">--</div>
+        <div class="muted">当前向量库文档片段数量</div>
+        <div class="status-box" id="baseMessage"></div>
+    </div>
+
+    <div class="card">
+        <h2 class="section-title">知识库文件上传</h2>
+        <div class="toolbar">
+            <input id="uploadFile" type="file" accept=".txt,.md" />
+            <input id="topic" type="text" placeholder="topic，例如：leave_policy" />
+            <input id="docType" type="text" placeholder="docType，例如：policy" />
+            <button onclick="uploadKnowledge()">上传并入库</button>
+        </div>
+        <div class="muted" style="margin-top:10px;">当前建议先上传 txt / md 文件。上传后会自动切片并写入向量库。</div>
+        <div class="status-box" id="uploadMessage"></div>
+    </div>
+
+    <div class="card">
+        <h2 class="section-title">知识检索调试</h2>
+        <div class="toolbar">
+            <input id="query" type="text" placeholder="查询词" style="min-width:260px;" />
+            <input id="searchTopic" type="text" placeholder="topic（可选）" />
+            <input id="searchDocType" type="text" placeholder="docType（可选）" />
+            <button onclick="searchKnowledge()">查询</button>
+        </div>
+        <div class="result-box" id="searchResult">请输入查询词后进行调试检索。</div>
+    </div>
+</div>
+
 <script>
-    layui.use(['table', 'layer'], function () {
-        const table = layui.table;
-        const layer = layui.layer;
-        setCurrentUser({
-            userId: 9001,
-            role: 'ADMIN',
-            displayName: '管理员'
-        });
-        const currentUser = getCurrentUser();
+    function getUserId() {
+        const userId = document.getElementById('userId').value;
+        if (!userId) throw new Error('请先填写 userId');
+        return userId;
+    }
 
-        async function loadCount() {
-            try {
-                const res = await get(`/admin/knowledge/count?userId=${currentUser.userId}`);
-                document.getElementById('knowledgeCount').innerText = res.data;
-            } catch (e) {
-                document.getElementById('knowledgeCount').innerText = '--';
-                layer.msg('知识库统计接口未接好');
-            }
+    async function loadCount() {
+        try {
+            document.getElementById('baseMessage').textContent = '正在加载统计...';
+            const userId = getUserId();
+            const res = await fetch(`/admin/knowledge/count?userId=${encodeURIComponent(userId)}`);
+            const data = await res.json();
+            document.getElementById('countValue').textContent = data.data ?? '--';
+            document.getElementById('baseMessage').textContent = data.message || '统计刷新完成';
+        } catch (e) {
+            document.getElementById('baseMessage').textContent = '加载失败：' + e.message;
         }
+    }
 
-        async function rebuildKnowledge() {
-            layer.confirm('确认重建知识库吗？', async function (index) {
-                try {
-                    const res = await post(`/admin/knowledge/rebuild?userId=${currentUser.userId}`);
-                    layer.alert(res.data || '重建完成');
-                    await loadCount();
-                } catch (e) {
-                    layer.msg(`重建失败：${e.message}`);
-                }
-                layer.close(index);
+    async function rebuildKnowledge() {
+        try {
+            document.getElementById('baseMessage').textContent = '正在重建知识库...';
+            const userId = getUserId();
+            const res = await fetch(`/admin/knowledge/rebuild?userId=${encodeURIComponent(userId)}`, {
+                method: 'POST'
             });
+            const data = await res.json();
+            document.getElementById('baseMessage').textContent = data.data || data.message || '重建完成';
+            await loadCount();
+        } catch (e) {
+            document.getElementById('baseMessage').textContent = '重建失败：' + e.message;
         }
+    }
 
-        async function searchKnowledge() {
-            const query = document.getElementById('queryInput').value || '';
-            const topic = document.getElementById('topicInput').value || '';
-            const docType = document.getElementById('docTypeInput').value || '';
+    async function uploadKnowledge() {
+        try {
+            const userId = getUserId();
+            const file = document.getElementById('uploadFile').files[0];
+            const topic = document.getElementById('topic').value.trim();
+            const docType = document.getElementById('docType').value.trim();
 
-            let url = `/debug/knowledge/search?query=${encodeURIComponent(query)}`;
-            if (topic) url += `&topic=${encodeURIComponent(topic)}`;
-            if (docType) url += `&docType=${encodeURIComponent(docType)}`;
-
-            try {
-                const rows = await get(url);
-                table.render({
-                    elem: '#knowledgeTable',
-                    data: rows || [],
-                    cols: [[
-                        { field: 'text', title: '文本内容', minWidth: 360, templet: d => (d.text || '').substring(0, 150) },
-                        { field: 'metadata', title: '元数据', minWidth: 280, templet: d => JSON.stringify(d.metadata || {}) }
-                    ]]
-                });
-            } catch (e) {
-                layer.msg(`查询失败：${e.message}`);
+            if (!file) {
+                alert('请先选择文件');
+                return;
             }
+
+            const formData = new FormData();
+            formData.append('userId', userId);
+            formData.append('file', file);
+            if (topic) formData.append('topic', topic);
+            if (docType) formData.append('docType', docType);
+
+            document.getElementById('uploadMessage').textContent = '正在上传并入库...';
+
+            const res = await fetch('/admin/knowledge/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+
+            document.getElementById('uploadMessage').textContent =
+                data.data || data.message || '上传完成';
+            await loadCount();
+        } catch (e) {
+            document.getElementById('uploadMessage').textContent = '上传失败：' + e.message;
         }
+    }
 
-        document.getElementById('refreshCountBtn').addEventListener('click', loadCount);
-        document.getElementById('rebuildBtn').addEventListener('click', rebuildKnowledge);
-        document.getElementById('searchBtn').addEventListener('click', searchKnowledge);
+    async function searchKnowledge() {
+        try {
+            const query = document.getElementById('query').value.trim();
+            const topic = document.getElementById('searchTopic').value.trim();
+            const docType = document.getElementById('searchDocType').value.trim();
 
-        loadCount();
-    });
+            if (!query) {
+                alert('请输入查询词');
+                return;
+            }
+
+            const params = new URLSearchParams();
+            params.set('query', query);
+            if (topic) params.set('topic', topic);
+            if (docType) params.set('docType', docType);
+
+            const res = await fetch(`/debug/knowledge/search?${params.toString()}`);
+            const data = await res.json();
+
+            document.getElementById('searchResult').textContent =
+                JSON.stringify(data, null, 2);
+        } catch (e) {
+            document.getElementById('searchResult').textContent = '查询失败：' + e.message;
+        }
+    }
+
+    loadCount();
 </script>
 </body>
 </html>

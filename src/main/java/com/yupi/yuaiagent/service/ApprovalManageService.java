@@ -40,9 +40,9 @@ public class ApprovalManageService {
                             SELECT CONCAT(
                                 COALESCE(l.leave_type, ''),
                                 ' ',
-                                DATE_FORMAT(l.start_time, '%%m-%%d %%H:%%i'),
+                                DATE_FORMAT(l.start_time, '%m-%d %H:%i'),
                                 ' ~ ',
-                                DATE_FORMAT(l.end_time, '%%m-%%d %%H:%%i')
+                                DATE_FORMAT(l.end_time, '%m-%d %H:%i')
                             )
                             FROM leave_request l
                             WHERE l.user_id = ai.applicant_user_id
@@ -286,5 +286,144 @@ public class ApprovalManageService {
             String status,
             String currentNode
     ) {
+    }
+    public List<ApprovalManageItem> queryAllApprovals(String businessType, String status) {
+        permissionService.requireHrOrAdmin();
+        ChatRole role = permissionService.currentRole();
+
+        String sql = """
+            SELECT
+                ai.id,
+                ai.applicant_user_id,
+                COALESCE(ep.employee_name, CONCAT('用户', ai.applicant_user_id)) AS employee_name,
+                ai.business_type,
+                ai.status,
+                ai.current_node,
+                ai.created_at,
+                CASE
+                    WHEN ai.business_type = 'LEAVE' THEN (
+                        SELECT CONCAT(
+                            COALESCE(l.leave_type, ''),
+                            ' ',
+                            DATE_FORMAT(l.start_time, '%m-%d %H:%i'),
+                            ' ~ ',
+                            DATE_FORMAT(l.end_time, '%m-%d %H:%i')
+                        )
+                        FROM leave_request l
+                        WHERE l.user_id = ai.applicant_user_id
+                        ORDER BY l.id DESC
+                        LIMIT 1
+                    )
+                    WHEN ai.business_type = 'CERTIFICATE' THEN (
+                        SELECT CONCAT(
+                            COALESCE(c.certificate_type, ''),
+                            ' / ',
+                            COALESCE(c.purpose, '')
+                        )
+                        FROM certificate_request c
+                        WHERE c.user_id = ai.applicant_user_id
+                        ORDER BY c.id DESC
+                        LIMIT 1
+                    )
+                    WHEN ai.business_type = 'OFFICE_SUPPLY' THEN (
+                        SELECT LEFT(COALESCE(o.item_description, ''), 120)
+                        FROM office_supply_order o
+                        WHERE o.user_id = ai.applicant_user_id
+                        ORDER BY o.id DESC
+                        LIMIT 1
+                    )
+                    ELSE ''
+                END AS detail_summary
+            FROM approval_instance ai
+            LEFT JOIN employee_profile ep ON ep.user_id = ai.applicant_user_id
+            WHERE (? IS NULL OR ? = '' OR ai.business_type = ?)
+              AND (? IS NULL OR ? = '' OR ai.status = ?)
+            """;
+
+        Object[] args = new Object[]{businessType, businessType, businessType, status, status, status};
+
+        if (role == ChatRole.ADMIN) {
+            sql += " ORDER BY ai.id DESC LIMIT 300";
+        } else {
+            sql += """
+                AND (
+                    ai.business_type IN ('LEAVE', 'CERTIFICATE', 'OFFICE_SUPPLY')
+                )
+                ORDER BY ai.id DESC
+                LIMIT 300
+                """;
+        }
+
+        return jdbcTemplate.query(sql, (rs, rowNum) -> new ApprovalManageItem(
+                rs.getLong("id"),
+                rs.getLong("applicant_user_id"),
+                rs.getString("employee_name"),
+                rs.getString("business_type"),
+                rs.getString("status"),
+                rs.getString("current_node"),
+                rs.getString("detail_summary"),
+                toLocalDateTime(rs.getTimestamp("created_at"))
+        ), args);
+    }
+    public String resetApprovalToPending(Long approvalId) {
+        permissionService.requireHrOrAdmin();
+
+        ApprovalRow row = jdbcTemplate.query("""
+            SELECT id, applicant_user_id, business_type, status, current_node
+            FROM approval_instance
+            WHERE id = ?
+            LIMIT 1
+            """, rs -> {
+            if (!rs.next()) {
+                return null;
+            }
+            return new ApprovalRow(
+                    rs.getLong("id"),
+                    rs.getLong("applicant_user_id"),
+                    rs.getString("business_type"),
+                    rs.getString("status"),
+                    rs.getString("current_node")
+            );
+        }, approvalId);
+
+        if (row == null) {
+            throw new BizException("审批单不存在");
+        }
+
+        if ("PENDING".equalsIgnoreCase(row.status()) || "PENDING_REVIEW".equalsIgnoreCase(row.status())) {
+            return "该审批单已是待审批状态";
+        }
+
+        String resetNode = resolvePendingNode(row.businessType());
+
+        jdbcTemplate.update("""
+            UPDATE approval_instance
+            SET status = 'PENDING',
+                current_node = ?,
+                can_remind = 0,
+                estimated_remaining_time = '1个工作日',
+                updated_at = NOW()
+            WHERE id = ?
+            """, resetNode, approvalId);
+
+        syncBusinessStatus(row.applicantUserId(), row.businessType(), "PENDING");
+
+        return "审批单 #" + approvalId + " 已重置为待审批";
+    }
+
+    private String resolvePendingNode(String businessType) {
+        if ("LEAVE".equalsIgnoreCase(businessType)) {
+            return "HR复核";
+        }
+        if ("CERTIFICATE".equalsIgnoreCase(businessType)) {
+            return "HR复核";
+        }
+        if ("OFFICE_SUPPLY".equalsIgnoreCase(businessType)) {
+            return "HR复核";
+        }
+        if ("EXPENSE".equalsIgnoreCase(businessType)) {
+            return "管理员审批";
+        }
+        return "待审批";
     }
 }

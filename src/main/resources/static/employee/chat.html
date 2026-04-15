@@ -1,327 +1,1116 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>员工端 - HR 智能助手</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" href="data:,">
-    <link href="https://unpkg.com/layui@2.13.4/dist/css/layui.css" rel="stylesheet">
-    <link href="../assets/css/common.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.css" />
     <style>
-        .chat-layout { display: flex; height: 100vh; background: #f7f8fa; }
-        .session-sidebar {
-            width: 260px; background: #111827; color: #fff;
-            display: flex; flex-direction: column;
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f5f7fb;
+            color: #1f2937;
         }
-        .session-header {
-            padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.08);
+
+        .layout {
+            display: grid;
+            grid-template-columns: 280px 1fr 340px;
+            min-height: 100vh;
         }
-        .session-list {
-            flex: 1; overflow-y: auto; padding: 8px;
+
+        .sidebar {
+            background: #1f2730;
+            color: #fff;
+            padding: 18px 16px;
+            overflow-y: auto;
         }
-        .session-item {
-            padding: 12px; border-radius: 10px; cursor: pointer;
-            margin-bottom: 8px; background: rgba(255,255,255,0.04);
+
+        .sidebar h2 {
+            margin: 0 0 16px;
+            font-size: 20px;
         }
-        .session-item.active { background: #1e9fff; }
-        .session-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
-        .session-last {
-            font-size: 12px; opacity: 0.85; line-height: 1.6;
-            max-height: 38px; overflow: hidden;
+
+        .new-chat-btn {
+            width: 100%;
+            border: none;
+            background: #2563eb;
+            color: #fff;
+            border-radius: 10px;
+            padding: 12px 14px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 18px;
         }
-        .chat-main {
-            flex: 1; display: flex; flex-direction: column;
+
+        .chat-list-title {
+            color: #cbd5e1;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+
+        .chat-item {
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chat-item:hover,
+        .chat-item.active {
+            background: rgba(37, 99, 235, 0.35);
+        }
+
+        .chat-item-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 6px;
+        }
+
+        .chat-item-time {
+            font-size: 12px;
+            color: #cbd5e1;
+        }
+
+        .center {
+            display: flex;
+            flex-direction: column;
             min-width: 0;
         }
-        .chat-topbar {
-            height: 60px; background: #fff; border-bottom: 1px solid #eee;
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 20px;
+
+        .topbar {
+            height: 56px;
+            background: #1f2730;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 24px;
+            padding: 0 24px;
         }
-        .main-content {
-            flex: 1; display: flex; min-height: 0;
+
+        .topbar a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
         }
-        .chat-center {
-            flex: 1; display: flex; flex-direction: column; min-width: 0;
+
+        .chat-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
         }
-        .chat-scroll {
-            flex: 1; overflow-y: auto; padding: 20px;
+
+        .chat-header {
+            background: #fff;
+            border-radius: 12px;
+            padding: 16px 18px;
+            margin-bottom: 14px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
         }
-        .msg-row {
-            margin-bottom: 16px; display: flex; flex-direction: column;
+
+        .chat-title {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 700;
         }
-        .msg-row.user { align-items: flex-end; }
-        .msg-bubble {
-            max-width: 72%; padding: 12px 14px; border-radius: 14px;
-            line-height: 1.8; white-space: pre-wrap; word-break: break-word;
-            background: #fff; border: 1px solid #eee;
+
+        .chat-subtitle {
+            margin-top: 6px;
+            color: #6b7280;
+            font-size: 14px;
         }
-        .msg-row.user .msg-bubble {
-            background: #1e9fff; color: #fff; border: none;
+
+        .chat-box {
+            flex: 1;
+            background: #fff;
+            border-radius: 12px;
+            padding: 18px;
+            overflow-y: auto;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
         }
-        .chat-input-area {
-            background: #fff; border-top: 1px solid #eee; padding: 16px 20px;
+
+        .empty-chat {
+            text-align: center;
+            color: #9ca3af;
+            padding: 60px 20px;
         }
-        .empty-tip {
-            color: #999; text-align: center; margin-top: 80px;
+
+        .message {
+            margin-bottom: 16px;
+            display: flex;
         }
-        .right-panel {
-            width: 300px; border-left: 1px solid #eee; background: #fff;
-            overflow-y: auto; padding: 16px;
+
+        .message.user {
+            justify-content: flex-end;
         }
-        .panel-card {
-            border: 1px solid #eee; border-radius: 12px; padding: 16px; margin-bottom: 16px;
+
+        .message.assistant {
+            justify-content: flex-start;
         }
-        .panel-card h3 {
-            font-size: 16px; font-weight: 700; margin-bottom: 12px;
+
+        .bubble {
+            max-width: 78%;
+            border-radius: 14px;
+            padding: 12px 14px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 14px;
         }
+
+        .message.user .bubble {
+            background: #2563eb;
+            color: #fff;
+            border-top-right-radius: 4px;
+        }
+
+        .message.assistant .bubble {
+            background: #f3f4f6;
+            color: #111827;
+            border-top-left-radius: 4px;
+        }
+
+        .composer {
+            margin-top: 14px;
+            background: #fff;
+            border-radius: 12px;
+            padding: 14px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+        }
+
+        .composer textarea {
+            width: 100%;
+            min-height: 96px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            padding: 12px;
+            resize: vertical;
+            font-size: 14px;
+        }
+
+        .composer-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            gap: 12px;
+        }
+
+        .composer-hint {
+            color: #9ca3af;
+            font-size: 13px;
+        }
+
+        .rightbar {
+            background: #fff;
+            padding: 16px;
+            border-left: 1px solid #e5e7eb;
+            overflow-y: auto;
+        }
+
+        .right-card {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #eef2f7;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .right-card h3 {
+            margin: 0 0 14px;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .quick-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
         .quick-btn {
-            width: 100%; text-align: left; margin-bottom: 10px;
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #d1d5db;
+            background: #fff;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .quick-btn:hover {
+            border-color: #2563eb;
+            color: #2563eb;
+            background: #eff6ff;
+        }
+
+        .faq-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .faq-btn {
+            border: none;
+            background: #f3f4f6;
+            border-radius: 999px;
+            padding: 8px 12px;
+            cursor: pointer;
+            color: #374151;
+        }
+
+        .form-wrap {
+            padding: 8px 4px 0;
+        }
+
+        .form-tip {
+            color: #6b7280;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
+        @media (max-width: 1200px) {
+            .layout {
+                grid-template-columns: 240px 1fr;
+            }
+            .rightbar {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .layout {
+                display: block;
+            }
+            .sidebar {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
-<div class="chat-layout">
-    <div class="session-sidebar">
-        <div class="session-header">
-            <button class="layui-btn layui-btn-fluid" id="newChatBtn">+ 新建对话</button>
-        </div>
-        <div class="session-list" id="sessionList"></div>
-    </div>
+<div class="layout">
+    <aside class="sidebar">
+        <h2>员工智能助手</h2>
+        <button class="new-chat-btn" id="newChatBtn">+ 新建对话</button>
 
-    <div class="chat-main">
-        <div class="chat-topbar">
-            <div>
-                <div style="font-size:18px;font-weight:700;">员工智能助手</div>
-                <div style="font-size:12px;color:#999;" id="currentChatLabel">未选择会话</div>
-            </div>
-            <div>
+        <div class="chat-list-title">历史对话</div>
+        <div id="chatList"></div>
+    </aside>
 
-                <a class="layui-btn layui-btn-primary layui-btn-sm" href="./notifications.html">消息中心</a>
-                <a class="layui-btn layui-btn-primary layui-btn-sm" href="./approvals.html">审批进度</a>
-            </div>
+    <main class="center">
+        <div class="topbar">
+            <a href="/employee/notifications.html">消息中心</a>
+            <a href="/employee/approvals.html">审批进度</a>
         </div>
 
-        <div class="main-content">
-            <div class="chat-center">
-                <div class="chat-scroll" id="chatScroll">
-                    <div class="empty-tip">请选择左侧历史对话，或点击“新建对话”开始聊天。</div>
-                </div>
-
-                <div class="chat-input-area">
-                    <div class="layui-input-group">
-                        <input type="text" id="messageInput" class="layui-input" placeholder="请输入你的问题，例如：我今年年假还剩多少？">
-                        <div class="layui-input-suffix">
-                            <button class="layui-btn" id="sendBtn">发送</button>
-                        </div>
-                    </div>
-                </div>
+        <div class="chat-panel">
+            <div class="chat-header">
+                <h1 class="chat-title">员工端 - HR 智能助手</h1>
+                <div class="chat-subtitle" id="chatStatusText">未选择会话</div>
             </div>
 
-            <div class="right-panel">
-                <div class="panel-card">
-                    <h3>快捷入口</h3>
-                    <button class="layui-btn layui-btn-primary quick-btn quick-question" data-question="我今年年假还剩多少？">年假余额</button>
-                    <button class="layui-btn layui-btn-primary quick-btn quick-question" data-question="帮我请本周五下午半天事假，原因是家里有事">请假申请</button>
-                    <button class="layui-btn layui-btn-primary quick-btn quick-question" data-question="帮我申请两支黑色签字笔和一个笔记本">办公用品申请</button>
-                    <button class="layui-btn layui-btn-primary quick-btn quick-question" data-question="帮我开一个在职证明，租房要用">在职证明</button>
-                    <button class="layui-btn layui-btn-primary quick-btn quick-question" data-question="帮我创建一个报销草稿，金额128.5，发票抬头是某某科技有限公司，类型是交通费，备注打车报销">报销草稿</button>
-                    <button class="layui-btn layui-btn-primary quick-btn quick-question" data-question="帮我预约明天下午3点到4点的面试间A，用于技术面试">会议室预约</button>
-                    <button class="layui-btn layui-btn-primary quick-btn quick-question" data-question="帮我申请一个访客预约，访客叫王五，手机号13700000000，明天来访，原因是商务来访">访客申请</button>
-                </div>
+            <div class="chat-box" id="chatBox">
+                <div class="empty-chat">请选择左侧历史对话，或点击右侧快捷入口开始新的对话。</div>
+            </div>
 
-                <div class="panel-card">
-                    <h3>常见问答</h3>
-                    <button class="layui-btn layui-btn-normal quick-btn quick-question" data-question="入职第一天要带什么？">入职流程</button>
-                    <button class="layui-btn layui-btn-normal quick-btn quick-question" data-question="离职最后一天要交接哪些 IT 设备？">离职流程</button>
-                    <button class="layui-btn layui-btn-normal quick-btn quick-question" data-question="育儿假怎么休？">育儿假政策</button>
-                    <button class="layui-btn layui-btn-normal quick-btn quick-question" data-question="报销贴票有什么要求？">报销标准</button>
-                    <button class="layui-btn layui-btn-normal quick-btn quick-question" data-question="我最近一条审批现在到哪一步了？">审批进度</button>
-                </div>
-
-                <div class="panel-card">
-                    <h3>使用说明</h3>
-                    <div class="layui-text">
-                        <p>左侧可以查看历史会话。</p>
-                        <p>中间用于持续多轮聊天。</p>
-                        <p>右侧按钮可直接点击发起常见问题或事务。</p>
-                    </div>
+            <div class="composer">
+                <textarea id="messageInput" placeholder="请输入问题，例如：我想了解育儿假政策"></textarea>
+                <div class="composer-actions">
+                    <div class="composer-hint">也可以点击右侧快捷入口，通过表单发起新的事务对话。</div>
+                    <button class="layui-btn" id="sendBtn">发送</button>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
+
+    <aside class="rightbar">
+        <div class="right-card">
+            <h3>快捷入口</h3>
+            <div class="quick-grid">
+                <button class="quick-btn" data-type="annualLeave">年假余额</button>
+                <button class="quick-btn" data-type="leaveApply">请假申请</button>
+                <button class="quick-btn" data-type="officeSupply">办公用品申请</button>
+                <button class="quick-btn" data-type="employmentCert">在职证明</button>
+                <button class="quick-btn" data-type="expenseDraft">报销草稿</button>
+                <button class="quick-btn" data-type="meetingRoom">会议室预约</button>
+                <button class="quick-btn" data-type="visitorApply">访客申请</button>
+            </div>
+        </div>
+
+        <div class="right-card">
+            <h3>常见问答</h3>
+            <div class="faq-list">
+                <button class="faq-btn" data-question="入职流程是什么？">入职流程</button>
+                <button class="faq-btn" data-question="离职流程是什么？">离职流程</button>
+                <button class="faq-btn" data-question="育儿假政策是什么？">育儿假政策</button>
+                <button class="faq-btn" data-question="报销标准是什么？">报销标准</button>
+                <button class="faq-btn" data-question="我想查看审批进度">审批进度</button>
+            </div>
+        </div>
+
+        <div class="right-card">
+            <h3>使用说明</h3>
+            <div style="color:#6b7280;line-height:1.8;font-size:14px;">
+                左侧查看历史对话。<br>
+                中间进行多轮聊天。<br>
+                右侧快捷入口会弹出信息表单，提交后自动创建一条新的 AI 对话。
+            </div>
+        </div>
+    </aside>
 </div>
 
-<script src="https://unpkg.com/layui@2.13.4/dist/layui.js"></script>
-<script src="../assets/js/config.js"></script>
-<script src="../assets/js/request.js"></script>
-<script src="../assets/js/auth.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.js"></script>
 <script>
-    layui.use(['layer'], function () {
-        const layer = layui.layer;
+    const CHAT_STORAGE_KEY = 'employee_chat_sessions_v2';
 
-        setCurrentUser({
-            userId: 1001,
+    let currentUser = null;
+    let currentChatId = '';
+    let chatSessions = [];
+    let layer = null;
+    let form = null;
+
+    function getCurrentUser() {
+        try {
+            const raw = localStorage.getItem('currentUser');
+            if (!raw) {
+                return { userId: 1001, userName: '当前员工' };
+            }
+            const user = JSON.parse(raw);
+            return {
+                userId: user.userId || 1001,
+                userName: user.userName || user.username || '当前员工'
+            };
+        } catch (e) {
+            return { userId: 1001, userName: '当前员工' };
+        }
+    }
+
+    function loadSessions() {
+        try {
+            const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+            if (!raw) return [];
+            const list = JSON.parse(raw);
+            return Array.isArray(list) ? list : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveSessions() {
+        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chatSessions));
+    }
+
+    function generateChatId() {
+        return 'employee-chat-' + Date.now();
+    }
+
+    function formatTime(ts) {
+        if (!ts) return '';
+        const d = new Date(ts);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mi = String(d.getMinutes()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+    }
+
+    function getCurrentSession() {
+        return chatSessions.find(item => item.chatId === currentChatId) || null;
+    }
+
+    function renderChatList() {
+        const box = document.getElementById('chatList');
+        if (!chatSessions.length) {
+            box.innerHTML = '<div style="color:#94a3b8;font-size:13px;">暂无历史对话</div>';
+            return;
+        }
+
+        box.innerHTML = chatSessions.map(item => `
+            <div class="chat-item ${item.chatId === currentChatId ? 'active' : ''}" data-chatid="${item.chatId}">
+                <div class="chat-item-title">${escapeHtml(item.title || '新对话')}</div>
+                <div class="chat-item-time">${formatTime(item.updatedAt)}</div>
+            </div>
+        `).join('');
+
+        box.querySelectorAll('.chat-item').forEach(el => {
+            el.addEventListener('click', () => {
+                openChat(el.getAttribute('data-chatid'));
+            });
+        });
+    }
+
+    function renderMessages() {
+        const chatBox = document.getElementById('chatBox');
+        const statusText = document.getElementById('chatStatusText');
+        const session = getCurrentSession();
+
+        if (!session) {
+            statusText.innerText = '未选择会话';
+            chatBox.innerHTML = '<div class="empty-chat">请选择左侧历史对话，或点击右侧快捷入口开始新的对话。</div>';
+            return;
+        }
+
+        statusText.innerText = `${session.title || '新对话'} · ${formatTime(session.updatedAt)}`;
+
+        if (!session.messages || !session.messages.length) {
+            chatBox.innerHTML = '<div class="empty-chat">当前会话暂无消息</div>';
+            return;
+        }
+
+        chatBox.innerHTML = session.messages.map(msg => `
+            <div class="message ${msg.role}">
+                <div class="bubble">${escapeHtml(msg.content)}</div>
+            </div>
+        `).join('');
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function openChat(chatId) {
+        currentChatId = chatId;
+        renderChatList();
+        renderMessages();
+    }
+
+    function createSession(title, firstUserMessage = '') {
+        const chatId = generateChatId();
+        const now = Date.now();
+        const session = {
+            chatId,
+            title: title || '新对话',
+            updatedAt: now,
+            messages: firstUserMessage ? [{ role: 'user', content: firstUserMessage, time: now }] : []
+        };
+        chatSessions.unshift(session);
+        saveSessions();
+        openChat(chatId);
+        return session;
+    }
+
+    function appendMessage(role, content) {
+        const session = getCurrentSession();
+        if (!session) return;
+
+        session.messages.push({
+            role,
+            content,
+            time: Date.now()
+        });
+        session.updatedAt = Date.now();
+
+        if (role === 'user' && session.messages.length === 1) {
+            session.title = buildTitleFromMessage(content);
+        }
+
+        saveSessions();
+        renderChatList();
+        renderMessages();
+    }
+
+    function buildTitleFromMessage(text) {
+        const clean = String(text || '').replace(/\s+/g, ' ').trim();
+        return clean.length > 18 ? clean.slice(0, 18) + '...' : (clean || '新对话');
+    }
+
+    function escapeHtml(text) {
+        return String(text ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
+    }
+
+    async function callAi(message) {
+        const payload = {
+            chatId: currentChatId,
+            userId: currentUser.userId,
+            tenantId: 'default',
             role: 'EMPLOYEE',
-            tenantId: 'company-a',
-            displayName: '员工用户'
+            message
+        };
+
+        const res = await fetch('/ai/employee/chat/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
         });
 
-        const currentUser = getCurrentUser();
-        let currentChatId = '';
-        let sessionListData = [];
-
-        const sessionListEl = document.getElementById('sessionList');
-        const chatScrollEl = document.getElementById('chatScroll');
-        const currentChatLabelEl = document.getElementById('currentChatLabel');
-        const messageInputEl = document.getElementById('messageInput');
-
-        function createChatId() {
-            return 'chat-' + Date.now();
+        if (!res.ok) {
+            throw new Error('请求失败：' + res.status);
         }
 
-        function escapeHtml(text) {
-            return (text || '')
-                .replaceAll('&', '&amp;')
-                .replaceAll('<', '&lt;')
-                .replaceAll('>', '&gt;')
-                .replaceAll('"', '&quot;')
-                .replaceAll("'", '&#39;');
+        return await res.text();
+    }
+
+    async function sendMessage(messageText, createNew = false, title = '') {
+        const text = String(messageText || '').trim();
+        if (!text) {
+            layer.msg('请输入内容');
+            return;
         }
 
-        function renderSessions() {
-            if (!sessionListData.length) {
-                sessionListEl.innerHTML = '<div style="padding:16px;color:#bbb;">暂无历史会话</div>';
-                return;
+        if (createNew || !getCurrentSession()) {
+            createSession(title || buildTitleFromMessage(text), '');
+        }
+
+        appendMessage('user', text);
+        appendMessage('assistant', '正在处理中，请稍候...');
+
+        const session = getCurrentSession();
+        const loadingIndex = session.messages.length - 1;
+
+        try {
+            const reply = await callAi(text);
+            session.messages[loadingIndex] = {
+                role: 'assistant',
+                content: reply || '系统未返回内容',
+                time: Date.now()
+            };
+            session.updatedAt = Date.now();
+            saveSessions();
+            renderChatList();
+            renderMessages();
+        } catch (e) {
+            session.messages[loadingIndex] = {
+                role: 'assistant',
+                content: '请求失败：' + e.message,
+                time: Date.now()
+            };
+            session.updatedAt = Date.now();
+            saveSessions();
+            renderChatList();
+            renderMessages();
+        }
+    }
+
+    function buildPromptByType(type, data) {
+        switch (type) {
+            case 'annualLeave':
+                return `请帮我查询年假信息。
+员工：${currentUser.userName}
+查询维度：${data.queryType || '本年度剩余天数'}
+补充说明：${data.note || '无'}
+请用员工助手口吻告诉我结果，并说明是否需要后续操作。`;
+
+            case 'leaveApply':
+                return `我想发起请假申请，请帮我生成并提交请假相关对话。
+员工：${currentUser.userName}
+请假类型：${data.leaveType}
+开始时间：${data.startTime}
+结束时间：${data.endTime}
+请假原因：${data.reason}
+补充说明：${data.note || '无'}
+请判断是否缺少必要信息，并给出下一步建议。`;
+
+            case 'officeSupply':
+                return `我想申请办公用品，请帮我生成申请。
+员工：${currentUser.userName}
+物品名称：${data.itemName}
+数量：${data.quantity}
+用途说明：${data.reason}
+期望到位时间：${data.expectDate || '未填写'}
+请帮我整理成清晰申请内容。`;
+
+            case 'employmentCert':
+                return `我想申请在职证明，请帮我生成办理对话。
+员工：${currentUser.userName}
+证明类型：${data.certType}
+用途：${data.purpose}
+语言：${data.language}
+领取方式：${data.delivery}
+补充说明：${data.note || '无'}
+请告诉我是否可以直接办理。`;
+
+            case 'expenseDraft':
+                return `我想创建报销草稿，请帮我整理信息。
+员工：${currentUser.userName}
+报销类别：${data.category}
+金额：${data.amount}
+发生日期：${data.expenseDate}
+报销说明：${data.reason}
+票据情况：${data.invoice || '未说明'}
+请帮我检查信息是否完整。`;
+
+            case 'meetingRoom':
+                return `我想预约会议室，请帮我生成预约申请。
+申请人：${currentUser.userName}
+会议日期：${data.meetingDate}
+开始时间：${data.startTime}
+结束时间：${data.endTime}
+参会人数：${data.attendees}
+会议主题：${data.subject}
+设备需求：${data.deviceNeed || '无'}
+请输出一段适合直接提交的预约说明。`;
+
+            case 'visitorApply':
+                return `我想发起访客申请，请帮我整理访客信息。
+申请人：${currentUser.userName}
+访客姓名：${data.visitorName}
+来访单位：${data.company}
+来访日期：${data.visitDate}
+接待人：${data.hostName}
+来访目的：${data.reason}
+备注：${data.note || '无'}
+请帮我输出正式申请内容。`;
+
+            default:
+                return '';
+        }
+    }
+
+    function getFormHtml(type) {
+        const forms = {
+            annualLeave: `
+                <div class="form-wrap layui-form" lay-filter="quickForm">
+                    <div class="form-tip">填写查询条件后，将自动创建新对话并提交给 AI。</div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">查询维度</label>
+                        <div class="layui-input-block">
+                            <select name="queryType">
+                                <option value="本年度剩余天数">本年度剩余天数</option>
+                                <option value="已使用天数">已使用天数</option>
+                                <option value="剩余与已使用">剩余与已使用</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">备注</label>
+                        <div class="layui-input-block">
+                            <textarea name="note" class="layui-textarea" placeholder="可不填"></textarea>
+                        </div>
+                    </div>
+                </div>`,
+
+            leaveApply: `
+                <div class="form-wrap layui-form" lay-filter="quickForm">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">请假类型</label>
+                        <div class="layui-input-block">
+                            <select name="leaveType">
+                                <option value="年假">年假</option>
+                                <option value="病假">病假</option>
+                                <option value="事假">事假</option>
+                                <option value="调休">调休</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">开始时间</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="startTime" class="layui-input" placeholder="例如：2026-04-16 09:00">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">结束时间</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="endTime" class="layui-input" placeholder="例如：2026-04-16 18:00">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">请假原因</label>
+                        <div class="layui-input-block">
+                            <textarea name="reason" class="layui-textarea" placeholder="请输入请假原因"></textarea>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">补充</label>
+                        <div class="layui-input-block">
+                            <textarea name="note" class="layui-textarea" placeholder="可不填"></textarea>
+                        </div>
+                    </div>
+                </div>`,
+
+            officeSupply: `
+                <div class="form-wrap layui-form" lay-filter="quickForm">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">物品名称</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="itemName" class="layui-input" placeholder="例如：键盘、A4打印纸">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">数量</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="quantity" class="layui-input" placeholder="请输入数量">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">用途说明</label>
+                        <div class="layui-input-block">
+                            <textarea name="reason" class="layui-textarea" placeholder="请输入用途"></textarea>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">期望到位</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="expectDate" class="layui-input" placeholder="例如：本周五前">
+                        </div>
+                    </div>
+                </div>`,
+
+            employmentCert: `
+                <div class="form-wrap layui-form" lay-filter="quickForm">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">证明类型</label>
+                        <div class="layui-input-block">
+                            <select name="certType">
+                                <option value="在职证明">在职证明</option>
+                                <option value="收入证明">收入证明</option>
+                                <option value="实习证明">实习证明</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">用途</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="purpose" class="layui-input" placeholder="例如：签证、租房、贷款">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">语言</label>
+                        <div class="layui-input-block">
+                            <select name="language">
+                                <option value="中文">中文</option>
+                                <option value="英文">英文</option>
+                                <option value="中英双语">中英双语</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">领取方式</label>
+                        <div class="layui-input-block">
+                            <select name="delivery">
+                                <option value="电子版">电子版</option>
+                                <option value="纸质版">纸质版</option>
+                                <option value="电子版+纸质版">电子版+纸质版</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">备注</label>
+                        <div class="layui-input-block">
+                            <textarea name="note" class="layui-textarea" placeholder="可不填"></textarea>
+                        </div>
+                    </div>
+                </div>`,
+
+            expenseDraft: `
+                <div class="form-wrap layui-form" lay-filter="quickForm">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">报销类别</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="category" class="layui-input" placeholder="例如：交通、餐饮、差旅">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">金额</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="amount" class="layui-input" placeholder="请输入金额">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">发生日期</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="expenseDate" class="layui-input" placeholder="例如：2026-04-15">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">报销说明</label>
+                        <div class="layui-input-block">
+                            <textarea name="reason" class="layui-textarea" placeholder="请输入费用说明"></textarea>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">票据情况</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="invoice" class="layui-input" placeholder="例如：已上传电子发票">
+                        </div>
+                    </div>
+                </div>`,
+
+            meetingRoom: `
+                <div class="form-wrap layui-form" lay-filter="quickForm">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">会议日期</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="meetingDate" class="layui-input" placeholder="例如：2026-04-18">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">开始时间</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="startTime" class="layui-input" placeholder="例如：14:00">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">结束时间</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="endTime" class="layui-input" placeholder="例如：15:30">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">参会人数</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="attendees" class="layui-input" placeholder="请输入人数">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">会议主题</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="subject" class="layui-input" placeholder="请输入主题">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">设备需求</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="deviceNeed" class="layui-input" placeholder="例如：投影仪、视频会议">
+                        </div>
+                    </div>
+                </div>`,
+
+            visitorApply: `
+                <div class="form-wrap layui-form" lay-filter="quickForm">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">访客姓名</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="visitorName" class="layui-input" placeholder="请输入访客姓名">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">来访单位</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="company" class="layui-input" placeholder="请输入单位名称">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">来访日期</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="visitDate" class="layui-input" placeholder="例如：2026-04-20 10:00">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">接待人</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="hostName" class="layui-input" placeholder="请输入接待人姓名">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">来访目的</label>
+                        <div class="layui-input-block">
+                            <textarea name="reason" class="layui-textarea" placeholder="请输入来访目的"></textarea>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">备注</label>
+                        <div class="layui-input-block">
+                            <textarea name="note" class="layui-textarea" placeholder="可不填"></textarea>
+                        </div>
+                    </div>
+                </div>`
+        };
+
+        return forms[type] || '<div style="padding:20px;">暂未配置表单</div>';
+    }
+
+    function getEntryTitle(type) {
+        const map = {
+            annualLeave: '年假余额',
+            leaveApply: '请假申请',
+            officeSupply: '办公用品申请',
+            employmentCert: '在职证明',
+            expenseDraft: '报销草稿',
+            meetingRoom: '会议室预约',
+            visitorApply: '访客申请'
+        };
+        return map[type] || '快捷入口';
+    }
+
+    function readFormValues(container) {
+        const fields = container.querySelectorAll('input, textarea, select');
+        const data = {};
+        fields.forEach(field => {
+            data[field.name] = (field.value || '').trim();
+        });
+        return data;
+    }
+
+    function validateQuickForm(type, data) {
+        const rules = {
+            leaveApply: ['leaveType', 'startTime', 'endTime', 'reason'],
+            officeSupply: ['itemName', 'quantity', 'reason'],
+            employmentCert: ['certType', 'purpose', 'language', 'delivery'],
+            expenseDraft: ['category', 'amount', 'expenseDate', 'reason'],
+            meetingRoom: ['meetingDate', 'startTime', 'endTime', 'attendees', 'subject'],
+            visitorApply: ['visitorName', 'company', 'visitDate', 'hostName', 'reason']
+        };
+
+        const required = rules[type] || [];
+        for (const key of required) {
+            if (!data[key]) {
+                return false;
             }
+        }
+        return true;
+    }
 
-            sessionListEl.innerHTML = sessionListData.map(item => `
-      <div class="session-item ${item.chatId === currentChatId ? 'active' : ''}" data-chat-id="${item.chatId}">
-        <div class="session-title">${escapeHtml(item.title || '新对话')}</div>
-        <div class="session-last">${escapeHtml(item.lastMessage || '')}</div>
-      </div>
-    `).join('');
+    function openQuickEntryForm(type) {
+        const title = getEntryTitle(type);
+        const html = getFormHtml(type);
 
-            document.querySelectorAll('.session-item').forEach(el => {
-                el.addEventListener('click', async () => {
-                    currentChatId = el.dataset.chatId;
-                    renderSessions();
-                    await loadMessages(currentChatId);
-                });
+        const index = layer.open({
+            type: 1,
+            area: ['680px', 'auto'],
+            title: title + ' - 信息填写',
+            shadeClose: true,
+            content: html,
+            btn: ['提交给 AI', '取消'],
+            success: function(layero) {
+                form.render();
+                initQuickFormDatePickers(type);
+            },
+            yes: async function(idx, layero) {
+                const data = readFormValues(layero[0]);
+
+                if (!validateQuickForm(type, data)) {
+                    layer.msg('请先把必填信息填写完整');
+                    return;
+                }
+
+                const prompt = buildPromptByType(type, data);
+                layer.close(idx);
+                await sendMessage(prompt, true, title);
+            }
+        });
+
+        return index;
+    }
+
+    function bindQuickEntryButtons() {
+        document.querySelectorAll('.quick-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                openQuickEntryForm(btn.getAttribute('data-type'));
             });
-        }
+        });
 
-        function renderMessages(messages) {
-            if (!messages || !messages.length) {
-                chatScrollEl.innerHTML = '<div class="empty-tip">当前会话还没有消息。</div>';
-                return;
-            }
+        document.querySelectorAll('.faq-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const q = btn.getAttribute('data-question');
+                await sendMessage(q, true, q);
+            });
+        });
+    }
 
-            chatScrollEl.innerHTML = messages.map(msg => `
-      <div class="msg-row ${msg.senderType === 'USER' ? 'user' : 'assistant'}">
-        <div class="msg-bubble">${escapeHtml(msg.content)}</div>
-      </div>
-    `).join('');
+    function bindBaseEvents() {
+        document.getElementById('newChatBtn').addEventListener('click', () => {
+            const session = createSession('新对话');
+            openChat(session.chatId);
+        });
 
-            chatScrollEl.scrollTop = chatScrollEl.scrollHeight;
-        }
-
-        async function loadSessions() {
-            const res = await get(`/chat/session/list?userId=${currentUser.userId}&role=${currentUser.role}`);
-            sessionListData = res.data || [];
-            renderSessions();
-        }
-
-        async function loadMessages(chatId) {
-            currentChatLabelEl.innerText = `当前会话：${chatId}`;
-            const res = await get(`/chat/session/messages?chatId=${chatId}&userId=${currentUser.userId}`);
-            renderMessages(res.data || []);
-        }
-
-        async function sendMessage(messageText) {
-            const message = (messageText ?? messageInputEl.value).trim();
-            if (!message) {
+        document.getElementById('sendBtn').addEventListener('click', async () => {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            if (!text) {
                 layer.msg('请输入内容');
                 return;
             }
+            input.value = '';
+            await sendMessage(text, !getCurrentSession(), text);
+        });
+    }
 
-            if (!currentChatId) {
-                currentChatId = createChatId();
-                currentChatLabelEl.innerText = `当前会话：${currentChatId}`;
-            }
+    let laydate = null;
 
-            messageInputEl.value = '';
+    layui.use(['layer', 'form', 'laydate'], function () {
+        layer = layui.layer;
+        form = layui.form;
+        laydate = layui.laydate;
 
-            const existing = chatScrollEl.querySelector('.empty-tip');
-            if (existing) {
-                chatScrollEl.innerHTML = '';
-            }
+        currentUser = getCurrentUser();
+        chatSessions = loadSessions();
 
-            chatScrollEl.innerHTML += `
-      <div class="msg-row user">
-        <div class="msg-bubble">${escapeHtml(message)}</div>
-      </div>
-      <div class="msg-row assistant" id="assistant-loading">
-        <div class="msg-bubble">处理中，请稍候...</div>
-      </div>
-    `;
-            chatScrollEl.scrollTop = chatScrollEl.scrollHeight;
-
-            try {
-                const body = {
-                    chatId: currentChatId,
-                    userId: currentUser.userId,
-                    tenantId: currentUser.tenantId,
-                    role: currentUser.role,
-                    message
-                };
-
-                const result = await post('/ai/employee/chat/sync', body);
-
-                const loadingEl = document.getElementById('assistant-loading');
-                if (loadingEl) {
-                    loadingEl.outerHTML = `
-          <div class="msg-row assistant">
-            <div class="msg-bubble">${escapeHtml(result)}</div>
-          </div>
-        `;
-                }
-
-                await loadSessions();
-            } catch (e) {
-                const loadingEl = document.getElementById('assistant-loading');
-                if (loadingEl) {
-                    loadingEl.outerHTML = `
-          <div class="msg-row assistant">
-            <div class="msg-bubble">请求失败：${escapeHtml(e.message)}</div>
-          </div>
-        `;
-                }
-            }
-
-            chatScrollEl.scrollTop = chatScrollEl.scrollHeight;
+        if (chatSessions.length) {
+            currentChatId = chatSessions[0].chatId;
         }
 
-        document.getElementById('newChatBtn').addEventListener('click', function () {
-            currentChatId = createChatId();
-            currentChatLabelEl.innerText = `当前会话：${currentChatId}`;
-            chatScrollEl.innerHTML = '<div class="empty-tip">新会话已创建，现在可以开始聊天。</div>';
-            renderSessions();
-        });
-
-        document.getElementById('sendBtn').addEventListener('click', () => sendMessage());
-        messageInputEl.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
-
-        document.querySelectorAll('.quick-question').forEach(btn => {
-            btn.addEventListener('click', () => sendMessage(btn.dataset.question));
-        });
-
-        loadSessions();
+        renderChatList();
+        renderMessages();
+        bindQuickEntryButtons();
+        bindBaseEvents();
     });
+
+
+    function initQuickFormDatePickers(type) {
+        if (!laydate) return;
+
+        if (type === 'leaveApply') {
+            laydate.render({
+                elem: '#leaveStartTime',
+                type: 'datetime',
+                trigger: 'click',
+                format: 'yyyy-MM-dd HH:mm'
+            });
+            laydate.render({
+                elem: '#leaveEndTime',
+                type: 'datetime',
+                trigger: 'click',
+                format: 'yyyy-MM-dd HH:mm'
+            });
+            return;
+        }
+
+        if (type === 'expenseDraft') {
+            laydate.render({
+                elem: '#expenseDate',
+                type: 'date',
+                trigger: 'click',
+                format: 'yyyy-MM-dd'
+            });
+            return;
+        }
+
+        if (type === 'meetingRoom') {
+            laydate.render({
+                elem: '#meetingDate',
+                type: 'date',
+                trigger: 'click',
+                format: 'yyyy-MM-dd'
+            });
+            laydate.render({
+                elem: '#meetingStartTime',
+                type: 'time',
+                trigger: 'click',
+                format: 'HH:mm'
+            });
+            laydate.render({
+                elem: '#meetingEndTime',
+                type: 'time',
+                trigger: 'click',
+                format: 'HH:mm'
+            });
+            return;
+        }
+
+        if (type === 'visitorApply') {
+            laydate.render({
+                elem: '#visitDate',
+                type: 'datetime',
+                trigger: 'click',
+                format: 'yyyy-MM-dd HH:mm'
+            });
+        }
+    }
 </script>
 </body>
 </html>

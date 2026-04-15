@@ -217,10 +217,13 @@
                     <div class="row-actions">
                         ${(row.status === 'PENDING' || row.status === 'PENDING_REVIEW')
             ? `
-                              <button class="success" onclick="handleApproval(${row.id}, 'approve')">通过</button>
-                              <button class="danger" onclick="handleApproval(${row.id}, 'reject')">驳回</button>
-                              `
-            : '<span class="muted">已处理</span>'
+      <button class="success" onclick="handleApproval(${row.id}, 'approve')">通过</button>
+      <button class="danger" onclick="handleApproval(${row.id}, 'reject')">驳回</button>
+      <button class="secondary" onclick="resetApproval(${row.id}, '${row.status}')">修改词条</button>
+      `
+            : `
+      <button class="secondary" onclick="resetApproval(${row.id}, '${row.status}')">修改词条</button>
+      `
         }
                     </div>
                 </td>
@@ -263,8 +266,29 @@
             .replaceAll('"', '&quot;')
             .replaceAll("'", '&#39;');
     }
+    async function resetApproval(id, status) {
+        if (status === 'PENDING' || status === 'PENDING_REVIEW') {
+            alert('已是待审批状态');
+            return;
+        }
 
+        const userId = getUserId();
+        const confirmed = confirm(`确认将审批单 #${id} 重置为待审批状态吗？`);
+        if (!confirmed) return;
+
+        setMessage(`正在重置审批单：#${id} ...`);
+
+        const res = await fetch(`/manage/approvals/${id}/reset?userId=${encodeURIComponent(userId)}&role=${role}`, {
+            method: 'POST'
+        });
+        const data = await res.json();
+
+        alert(data.data || data.message || '操作完成');
+        await loadAll();
+    }
     loadPending();
+
+
 </script>
 </body>
 </html>

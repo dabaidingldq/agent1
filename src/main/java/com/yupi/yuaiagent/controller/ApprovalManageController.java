@@ -104,4 +104,26 @@ public class ApprovalManageController {
             this.comment = comment;
         }
     }
+    @GetMapping("/all")
+    public BaseResponse<List<ApprovalManageService.ApprovalManageItem>> all(
+            @RequestParam Long userId,
+            @RequestParam String role,
+            @RequestParam(required = false) String businessType,
+            @RequestParam(required = false) String status) {
+        return withContext(userId, role, "approval-all",
+                () -> BaseResponse.success(
+                        approvalManageService.queryAllApprovals(businessType, status)
+                ));
+    }
+
+    @PostMapping("/{approvalId}/reset")
+    public BaseResponse<String> reset(
+            @PathVariable Long approvalId,
+            @RequestParam Long userId,
+            @RequestParam String role) {
+        return withContext(userId, role, "approval-reset",
+                () -> BaseResponse.success(
+                        approvalManageService.resetApprovalToPending(approvalId)
+                ));
+    }
 }
