@@ -11,9 +11,14 @@ public class ApprovalService {
     private final JdbcTemplate jdbcTemplate;
     private final PermissionService permissionService;
 
-    public ApprovalService(@Qualifier("bizJdbcTemplate") JdbcTemplate jdbcTemplate, PermissionService permissionService) {
+    private final NotificationPublishService notificationPublishService;
+
+    public ApprovalService(@Qualifier("bizJdbcTemplate") JdbcTemplate jdbcTemplate,
+                           PermissionService permissionService,
+                           NotificationPublishService notificationPublishService) {
         this.jdbcTemplate = jdbcTemplate;
         this.permissionService = permissionService;
+        this.notificationPublishService = notificationPublishService;
     }
 
     public ApprovalProgressResult queryLatestMyApproval(String businessType) {
@@ -56,30 +61,41 @@ public class ApprovalService {
         Long userId = permissionService.currentUserId();
 
         String sql = """
-                SELECT id, can_remind
-                FROM approval_instance
-                WHERE id = ?
-                  AND applicant_user_id = ?
-                LIMIT 1
-                """;
+            SELECT id, can_remind, business_type, current_node
+            FROM approval_instance
+            WHERE id = ? AND applicant_user_id = ?
+            LIMIT 1
+            """;
 
         return jdbcTemplate.query(sql, rs -> {
             if (!rs.next()) {
                 return "未找到可催办的审批单，或该审批单不属于您。";
             }
+
             boolean canRemind = rs.getBoolean("can_remind");
             if (!canRemind) {
                 return "当前审批单暂不支持催办。";
             }
 
-            jdbcTemplate.update("""
-                    UPDATE approval_instance
-                    SET remind_count = COALESCE(remind_count, 0) + 1,
-                        updated_at = NOW()
-                    WHERE id = ?
-                    """, approvalId);
+            String businessType = rs.getString("business_type");
+            String currentNode = rs.getString("current_node");
 
-            return "已向当前审批人发送温馨催办。";
+            jdbcTemplate.update("""
+                UPDATE approval_instance
+                SET remind_count = COALESCE(remind_count, 0) + 1,
+                    updated_at = NOW()
+                WHERE id = ?
+                """, approvalId);
+
+            notificationPublishService.publishSystemToHrAndAdmin(
+                    "员工催办提醒",
+                    "员工 userId=" + userId + " 对审批单 #" + approvalId +
+                            " 发起了催办。业务类型：" + businessType +
+                            "，当前节点：" + currentNode + "。",
+                    "APPROVAL_REMIND"
+            );
+
+            return "已向 HR / ADMIN 发送催办提醒。";
         }, approvalId, userId);
     }
 }

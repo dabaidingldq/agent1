@@ -3,6 +3,7 @@ package com.yupi.yuaiagent.controller;
 import com.yupi.yuaiagent.common.BaseResponse;
 import com.yupi.yuaiagent.context.HrRequestContext;
 import com.yupi.yuaiagent.context.HrRequestContextHolder;
+import com.yupi.yuaiagent.exception.BizException;
 import com.yupi.yuaiagent.model.enums.ChatRole;
 import com.yupi.yuaiagent.model.hr.NotificationDTO;
 import com.yupi.yuaiagent.model.hr.NotificationStatsResult;
@@ -10,6 +11,7 @@ import com.yupi.yuaiagent.service.NotificationQueryService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 @RestController
 @RequestMapping("/notification")
@@ -23,63 +25,59 @@ public class NotificationController {
 
     @GetMapping("/my")
     public BaseResponse<List<NotificationDTO>> myNotifications(@RequestParam Long userId,
+                                                               @RequestParam String role,
                                                                @RequestParam(defaultValue = "10") Integer limit) {
-        try {
-            HrRequestContextHolder.setContext(HrRequestContext.builder()
-                    .userId(userId)
-                    .tenantId("default")
-                    .chatId("notification-query")
-                    .role(ChatRole.EMPLOYEE)
-                    .build());
-            return BaseResponse.success(notificationQueryService.queryMyNotifications(limit));
-        } finally {
-            HrRequestContextHolder.clear();
-        }
+        return withContext(userId, role, "notification-query",
+                () -> BaseResponse.success(notificationQueryService.queryMyNotifications(limit)));
     }
 
     @GetMapping("/stats")
-    public BaseResponse<NotificationStatsResult> myStats(@RequestParam Long userId) {
-        try {
-            HrRequestContextHolder.setContext(HrRequestContext.builder()
-                    .userId(userId)
-                    .tenantId("default")
-                    .chatId("notification-stats")
-                    .role(ChatRole.EMPLOYEE)
-                    .build());
-            return BaseResponse.success(notificationQueryService.queryMyNotificationStats());
-        } finally {
-            HrRequestContextHolder.clear();
-        }
+    public BaseResponse<NotificationStatsResult> myStats(@RequestParam Long userId,
+                                                         @RequestParam String role) {
+        return withContext(userId, role, "notification-stats",
+                () -> BaseResponse.success(notificationQueryService.queryMyNotificationStats()));
     }
 
     @PostMapping("/{id}/read")
     public BaseResponse<String> markAsRead(@PathVariable("id") Long id,
-                                           @RequestParam Long userId) {
+                                           @RequestParam Long userId,
+                                           @RequestParam String role) {
+        return withContext(userId, role, "notification-read",
+                () -> BaseResponse.success(notificationQueryService.markAsRead(id)));
+    }
+
+    @PostMapping("/read-all")
+    public BaseResponse<String> markAllAsRead(@RequestParam Long userId,
+                                              @RequestParam String role) {
+        return withContext(userId, role, "notification-read-all",
+                () -> BaseResponse.success(notificationQueryService.markAllAsRead()));
+    }
+
+    private <T> BaseResponse<T> withContext(Long userId,
+                                            String role,
+                                            String chatId,
+                                            Supplier<BaseResponse<T>> action) {
         try {
             HrRequestContextHolder.setContext(HrRequestContext.builder()
                     .userId(userId)
                     .tenantId("default")
-                    .chatId("notification-read")
-                    .role(ChatRole.EMPLOYEE)
+                    .chatId(chatId)
+                    .role(parseRole(role))
                     .build());
-            return BaseResponse.success(notificationQueryService.markAsRead(id));
+            return action.get();
         } finally {
             HrRequestContextHolder.clear();
         }
     }
 
-    @PostMapping("/read-all")
-    public BaseResponse<String> markAllAsRead(@RequestParam Long userId) {
+    private ChatRole parseRole(String role) {
+        if (role == null || role.isBlank()) {
+            throw new BizException("role 不能为空");
+        }
         try {
-            HrRequestContextHolder.setContext(HrRequestContext.builder()
-                    .userId(userId)
-                    .tenantId("default")
-                    .chatId("notification-read-all")
-                    .role(ChatRole.EMPLOYEE)
-                    .build());
-            return BaseResponse.success(notificationQueryService.markAllAsRead());
-        } finally {
-            HrRequestContextHolder.clear();
+            return ChatRole.valueOf(role.trim().toUpperCase());
+        } catch (Exception e) {
+            throw new BizException("role 仅支持 EMPLOYEE / HR / ADMIN");
         }
     }
 }

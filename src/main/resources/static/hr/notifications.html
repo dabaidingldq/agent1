@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HR 端 - 消息中心</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #f5f7fb;
+      color: #111827;
+    }
+    .topbar {
+      height: 56px;
+      background: #1f2730;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 24px;
+      color: #fff;
+    }
+    .topbar a {
+      color: #fff;
+      text-decoration: none;
+      margin-left: 20px;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 0 16px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      margin-bottom: 16px;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .stat-value {
+      font-size: 30px;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+    .muted {
+      color: #6b7280;
+      font-size: 13px;
+    }
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    input, button, select {
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+    button {
+      border: none;
+      background: #2563eb;
+      color: #fff;
+      cursor: pointer;
+    }
+    button.secondary {
+      background: #6b7280;
+    }
+    .message-item {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+      background: #fff;
+    }
+    .message-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .message-content {
+      line-height: 1.7;
+      color: #374151;
+      margin-bottom: 10px;
+      white-space: pre-wrap;
+    }
+    .message-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #eff6ff;
+      color: #2563eb;
+    }
+    .tag.unread {
+      background: #fff7e6;
+      color: #d97706;
+    }
+    .empty-box {
+      text-align: center;
+      color: #9ca3af;
+      padding: 36px 10px;
+    }
+  </style>
+</head>
+<body>
+<div class="topbar">
+  <div><strong>HR 消息中心</strong></div>
+  <div>
+    <a href="/hr/chat.html">返回 HR 智能助手</a>
+    <a href="/hr/analytics.html">团队分析</a>
+    <a href="/hr/approvals.html">审批处理</a>
+  </div>
+</div>
+
+<div class="container">
+  <div class="card">
+    <div class="toolbar">
+      <label>HR 用户 ID：
+        <input id="userId" type="number" value="2001" />
+      </label>
+      <button onclick="loadAll()">刷新</button>
+      <button class="secondary" onclick="markAllRead()">全部已读</button>
+    </div>
+    <div class="muted" id="pageMessage"></div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0;">发送公告</h2>
+    <div class="toolbar">
+      <input id="publishTitle" type="text" placeholder="消息标题" style="min-width:220px;" />
+      <select id="publishType">
+        <option value="SYSTEM">系统公告</option>
+        <option value="NOTICE">通知公告</option>
+      </select>
+      <button onclick="publishAll()">发送给所有人</button>
+    </div>
+    <textarea id="publishContent" placeholder="请输入消息内容" style="width:100%;min-height:90px;border:1px solid #d1d5db;border-radius:10px;padding:12px;"></textarea>
+  </div>
+
+  <div class="stats">
+    <div class="card">
+      <div class="muted">总消息数</div>
+      <div class="stat-value" id="totalCount">--</div>
+    </div>
+    <div class="card">
+      <div class="muted">未读消息数</div>
+      <div class="stat-value" id="unreadCount">--</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0;">消息列表</h2>
+    <div id="messageList">
+      <div class="empty-box">正在加载...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const role = 'HR';
+
+  function getUserId() {
+    const userId = document.getElementById('userId').value;
+    if (!userId) throw new Error('请先填写 userId');
+    return userId;
+  }
+
+  function formatTime(value) {
+    if (!value) return '--';
+    return String(value).replace('T', ' ').slice(0, 16);
+  }
+
+  function escapeHtml(text) {
+    return String(text ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
+  }
+
+  function safeReadFlag(row) {
+    return !!(row.isRead ?? row.read);
+  }
+
+  async function loadStats() {
+    const userId = getUserId();
+    const res = await fetch(`/notification/stats?userId=${encodeURIComponent(userId)}&role=${role}`);
+    const data = await res.json();
+    document.getElementById('totalCount').textContent = data.data?.totalCount ?? '--';
+    document.getElementById('unreadCount').textContent = data.data?.unreadCount ?? '--';
+  }
+
+  async function loadMessages() {
+    const userId = getUserId();
+    const res = await fetch(`/notification/my?userId=${encodeURIComponent(userId)}&role=${role}&limit=20`);
+    const data = await res.json();
+    const list = Array.isArray(data.data) ? data.data : [];
+
+    const box = document.getElementById('messageList');
+    if (!list.length) {
+      box.innerHTML = '<div class="empty-box">暂无消息</div>';
+      return;
+    }
+
+    box.innerHTML = list.map(item => `
+      <div class="message-item">
+        <div class="message-title">${escapeHtml(item.title || '未命名消息')}</div>
+        <div class="message-content">${escapeHtml(item.content || '')}</div>
+        <div class="message-footer">
+          <div>
+            <span class="tag ${safeReadFlag(item) ? '' : 'unread'}">${safeReadFlag(item) ? '已读' : '未读'}</span>
+            <span class="tag">${escapeHtml(item.type || 'SYSTEM')}</span>
+            <span class="muted" style="margin-left:10px;">${escapeHtml(formatTime(item.createdAt))}</span>
+          </div>
+          ${safeReadFlag(item) ? '' : `<button onclick="markRead(${item.id})">标记已读</button>`}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function markRead(id) {
+    const userId = getUserId();
+    const res = await fetch(`/notification/${id}/read?userId=${encodeURIComponent(userId)}&role=${role}`, {
+      method: 'POST'
+    });
+    const data = await res.json();
+    document.getElementById('pageMessage').textContent = data.data || data.message || '';
+    await loadAll();
+  }
+
+  async function markAllRead() {
+    const userId = getUserId();
+    const res = await fetch(`/notification/read-all?userId=${encodeURIComponent(userId)}&role=${role}`, {
+      method: 'POST'
+    });
+    const data = await res.json();
+    document.getElementById('pageMessage').textContent = data.data || data.message || '';
+    await loadAll();
+  }
+
+  async function publishAll() {
+    const userId = getUserId();
+    const title = document.getElementById('publishTitle').value.trim();
+    const content = document.getElementById('publishContent').value.trim();
+    const type = document.getElementById('publishType').value;
+
+    if (!title || !content) {
+      alert('请填写标题和内容');
+      return;
+    }
+
+    const res = await fetch(`/notification/publish/all?userId=${encodeURIComponent(userId)}&role=${role}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, content, type })
+    });
+    const data = await res.json();
+    document.getElementById('pageMessage').textContent = data.data || data.message || '';
+    await loadAll();
+  }
+
+  async function loadAll() {
+    try {
+      document.getElementById('pageMessage').textContent = '正在加载消息...';
+      await Promise.all([loadStats(), loadMessages()]);
+      document.getElementById('pageMessage').textContent = '消息已刷新';
+    } catch (e) {
+      document.getElementById('pageMessage').textContent = '加载失败：' + e.message;
+    }
+  }
+
+  loadAll();
+</script>
+</body>
+</html>

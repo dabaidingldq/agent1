@@ -26,6 +26,7 @@
                 <div>未读消息数：<span id="unreadCount">--</span></div>
             </div>
         </div>
+        <div id="pageMessage" style="margin-top:10px;color:#666;"></div>
     </div>
 
     <div class="page-card">
@@ -34,7 +35,11 @@
 </div>
 
 <script type="text/html" id="notificationBar">
+    {{# if(!(d.isRead ?? d.read)){ }}
     <a class="layui-btn layui-btn-xs" lay-event="read">标记已读</a>
+    {{# } else { }}
+    <span class="layui-font-12" style="color:#999;">已读</span>
+    {{# } }}
 </script>
 
 <script src="https://unpkg.com/layui@2.13.4/dist/layui.js"></script>
@@ -46,48 +51,83 @@
         const table = layui.table;
         const layer = layui.layer;
         const currentUser = getCurrentUser();
+        const role = 'EMPLOYEE';
+
+        function safeReadFlag(row) {
+            return !!(row.isRead ?? row.read);
+        }
+
+        function safeTime(value) {
+            if (!value) return '--';
+            return String(value).replace('T', ' ').slice(0, 19);
+        }
 
         async function loadStats() {
-            const res = await get(`/notification/stats?userId=${currentUser.userId}`);
-            document.getElementById('totalCount').innerText = res.data.totalCount;
-            document.getElementById('unreadCount').innerText = res.data.unreadCount;
+            const res = await get(`/notification/stats?userId=${currentUser.userId}&role=${role}`);
+            document.getElementById('totalCount').innerText = res?.data?.totalCount ?? 0;
+            document.getElementById('unreadCount').innerText = res?.data?.unreadCount ?? 0;
         }
 
         async function loadTable() {
-            const res = await get(`/notification/my?userId=${currentUser.userId}&limit=20`);
+            const res = await get(`/notification/my?userId=${currentUser.userId}&role=${role}&limit=20`);
+            const list = Array.isArray(res?.data) ? res.data : [];
+
             table.render({
                 elem: '#notificationTable',
-                data: res.data || [],
+                data: list,
                 cols: [[
                     { field: 'id', title: 'ID', width: 80 },
                     { field: 'title', title: '标题', minWidth: 180 },
                     { field: 'content', title: '内容', minWidth: 260 },
                     { field: 'type', title: '类型', width: 160 },
-                    { field: 'isRead', title: '已读', width: 100, templet: d => d.isRead ? '是' : '否' },
-                    { field: 'createdAt', title: '时间', minWidth: 180 },
+                    {
+                        field: 'isRead',
+                        title: '已读',
+                        width: 100,
+                        templet: d => safeReadFlag(d) ? '是' : '否'
+                    },
+                    {
+                        field: 'createdAt',
+                        title: '时间',
+                        minWidth: 180,
+                        templet: d => safeTime(d.createdAt)
+                    },
                     { fixed: 'right', title: '操作', toolbar: '#notificationBar', width: 120 }
-                ]]
+                ]],
+                text: {
+                    none: '暂无消息'
+                }
             });
         }
 
         table.on('tool(notificationTable)', async function (obj) {
             if (obj.event === 'read') {
-                await post(`/notification/${obj.data.id}/read?userId=${currentUser.userId}`);
+                await post(`/notification/${obj.data.id}/read?userId=${currentUser.userId}&role=${role}`);
                 layer.msg('已标记');
-                await loadStats();
-                await loadTable();
+                await loadAll();
             }
         });
 
         document.getElementById('readAllBtn').addEventListener('click', async () => {
-            await post(`/notification/read-all?userId=${currentUser.userId}`);
+            await post(`/notification/read-all?userId=${currentUser.userId}&role=${role}`);
             layer.msg('全部已读');
-            await loadStats();
-            await loadTable();
+            await loadAll();
         });
 
-        loadStats();
-        loadTable();
+        async function loadAll() {
+            try {
+                document.getElementById('pageMessage').innerText = '正在加载消息...';
+                await loadStats();
+                await loadTable();
+                document.getElementById('pageMessage').innerText = '消息已刷新';
+            } catch (e) {
+                console.error(e);
+                document.getElementById('pageMessage').innerText = '加载失败：' + (e.message || e);
+                layer.msg('消息中心加载失败');
+            }
+        }
+
+        loadAll();
     });
 </script>
 </body>
