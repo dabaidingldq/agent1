@@ -398,11 +398,11 @@
 <script>
     const REQUIRED_ROLE = 'EMPLOYEE';
     const CHAT_API_URL = '/ai/employee/chat/sync';
-    const CHAT_STORAGE_KEY = 'employee_chat_sessions_v2';
 
     let currentUser = null;
     let currentChatId = '';
     let chatSessions = [];
+    let currentMessages = [];
     let layer = null;
     let form = null;
 
@@ -414,19 +414,50 @@
         };
     }
 
-    function loadSessions() {
+    async function loadSessions() {
         try {
-            const raw = localStorage.getItem(CHAT_STORAGE_KEY);
-            if (!raw) return [];
-            const list = JSON.parse(raw);
-            return Array.isArray(list) ? list : [];
+            const res = await sessionFetch('/chat/sessions', {
+                method: 'GET'
+            });
+
+            const data = await res.json();
+
+            if (data.code !== 0) {
+                layer && layer.msg(data.message || '加载历史会话失败');
+                return [];
+            }
+
+            return Array.isArray(data.data) ? data.data : [];
         } catch (e) {
+            console.error('加载历史会话失败：', e);
             return [];
         }
     }
+    async function loadMessages(chatId) {
+        if (!chatId) {
+            return [];
+        }
 
+        try {
+            const res = await sessionFetch(`/chat/sessions/${encodeURIComponent(chatId)}/messages`, {
+                method: 'GET'
+            });
+
+            const data = await res.json();
+
+            if (data.code !== 0) {
+                layer && layer.msg(data.message || '加载会话消息失败');
+                return [];
+            }
+
+            return Array.isArray(data.data) ? data.data : [];
+        } catch (e) {
+            console.error('加载会话消息失败：', e);
+            return [];
+        }
+    }
     function saveSessions() {
-        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chatSessions));
+        // 数据库版历史记录，不再使用 localStorage
     }
 
     function generateChatId() {
@@ -482,57 +513,76 @@
 
         statusText.innerText = `${session.title || '新对话'} · ${formatTime(session.updatedAt)}`;
 
-        if (!session.messages || !session.messages.length) {
+        if (!currentMessages || !currentMessages.length) {
             chatBox.innerHTML = '<div class="empty-chat">当前会话暂无消息</div>';
             return;
         }
 
-        chatBox.innerHTML = session.messages.map(msg => `
-            <div class="message ${msg.role}">
+        chatBox.innerHTML = currentMessages.map(msg => {
+            const role = msg.senderType === 'USER' ? 'user' : 'assistant';
+            return `
+            <div class="message ${role}">
                 <div class="bubble">${escapeHtml(msg.content)}</div>
             </div>
-        `).join('');
+        `;
+        }).join('');
 
         chatBox.scrollTop = chatBox.scrollHeight;
     }
-
-    function openChat(chatId) {
+    async function openChat(chatId) {
         currentChatId = chatId;
+        currentMessages = await loadMessages(chatId);
         renderChatList();
         renderMessages();
     }
 
     function createSession(title, firstUserMessage = '') {
         const chatId = generateChatId();
-        const now = Date.now();
+        const now = new Date().toISOString();
+
         const session = {
             chatId,
             title: title || '新对话',
+            lastMessage: firstUserMessage || '',
             updatedAt: now,
-            messages: firstUserMessage ? [{ role: 'user', content: firstUserMessage, time: now }] : []
+            createdAt: now
         };
+
+        currentChatId = chatId;
+        currentMessages = [];
+
         chatSessions.unshift(session);
-        saveSessions();
-        openChat(chatId);
+        renderChatList();
+        renderMessages();
+
         return session;
     }
-
     function appendMessage(role, content) {
-        const session = getCurrentSession();
-        if (!session) return;
-
-        session.messages.push({
-            role,
-            content,
-            time: Date.now()
-        });
-        session.updatedAt = Date.now();
-
-        if (role === 'user' && session.messages.length === 1) {
-            session.title = buildTitleFromMessage(content);
+        if (!currentChatId) {
+            return;
         }
 
-        saveSessions();
+        const senderType = role === 'user' ? 'USER' : 'ASSISTANT';
+
+        currentMessages.push({
+            id: null,
+            chatId: currentChatId,
+            userId: currentUser ? currentUser.userId : null,
+            senderType,
+            content,
+            createdAt: new Date().toISOString()
+        });
+
+        const session = getCurrentSession();
+        if (session) {
+            session.lastMessage = content;
+            session.updatedAt = new Date().toISOString();
+
+            if (role === 'user' && (!session.title || session.title === '新对话')) {
+                session.title = buildTitleFromMessage(content);
+            }
+        }
+
         renderChatList();
         renderMessages();
     }
@@ -570,45 +620,34 @@
         return await res.text();
     }
 
-    async function sendMessage(messageText, createNew = false, title = '') {
-        const text = String(messageText || '').trim();
-        if (!text) {
-            layer.msg('请输入内容');
+    function appendMessage(role, content) {
+        if (!currentChatId) {
             return;
         }
 
-        if (createNew || !getCurrentSession()) {
-            createSession(title || buildTitleFromMessage(text), '');
-        }
+        const senderType = role === 'user' ? 'USER' : 'ASSISTANT';
 
-        appendMessage('user', text);
-        appendMessage('assistant', '正在处理中，请稍候...');
+        currentMessages.push({
+            id: null,
+            chatId: currentChatId,
+            userId: currentUser ? currentUser.userId : null,
+            senderType,
+            content,
+            createdAt: new Date().toISOString()
+        });
 
         const session = getCurrentSession();
-        const loadingIndex = session.messages.length - 1;
+        if (session) {
+            session.lastMessage = content;
+            session.updatedAt = new Date().toISOString();
 
-        try {
-            const reply = await callAi(text);
-            session.messages[loadingIndex] = {
-                role: 'assistant',
-                content: reply || '系统未返回内容',
-                time: Date.now()
-            };
-            session.updatedAt = Date.now();
-            saveSessions();
-            renderChatList();
-            renderMessages();
-        } catch (e) {
-            session.messages[loadingIndex] = {
-                role: 'assistant',
-                content: '请求失败：' + e.message,
-                time: Date.now()
-            };
-            session.updatedAt = Date.now();
-            saveSessions();
-            renderChatList();
-            renderMessages();
+            if (role === 'user' && (!session.title || session.title === '新对话')) {
+                session.title = buildTitleFromMessage(content);
+            }
         }
+
+        renderChatList();
+        renderMessages();
     }
 
     function buildPromptByType(type, data) {
@@ -1030,8 +1069,7 @@
 
     function bindBaseEvents() {
         document.getElementById('newChatBtn').addEventListener('click', () => {
-            const session = createSession('新对话');
-            openChat(session.chatId);
+            createSession('新对话');
         });
 
         document.getElementById('sendBtn').addEventListener('click', async () => {
@@ -1060,11 +1098,14 @@
 
         fillUserInfo(loginUser);
         currentUser = buildFrontUser(loginUser);
-
-        chatSessions = loadSessions();
+        chatSessions = await loadSessions();
 
         if (chatSessions.length) {
             currentChatId = chatSessions[0].chatId;
+            currentMessages = await loadMessages(currentChatId);
+        } else {
+            currentChatId = '';
+            currentMessages = [];
         }
 
         renderChatList();

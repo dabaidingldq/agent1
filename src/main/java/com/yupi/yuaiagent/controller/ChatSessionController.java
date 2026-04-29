@@ -1,18 +1,18 @@
 package com.yupi.yuaiagent.controller;
 
-import com.yupi.yuaiagent.common.BaseResponse;
+import com.yupi.yuaiagent.model.auth.LoginUser;
 import com.yupi.yuaiagent.model.chat.ChatMessageDTO;
 import com.yupi.yuaiagent.model.chat.ChatSessionDTO;
 import com.yupi.yuaiagent.service.ChatSessionService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpSession;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/chat/session")
+@RequestMapping("/chat")
 public class ChatSessionController {
 
     private final ChatSessionService chatSessionService;
@@ -21,15 +21,50 @@ public class ChatSessionController {
         this.chatSessionService = chatSessionService;
     }
 
-    @GetMapping("/list")
-    public BaseResponse<List<ChatSessionDTO>> list(@RequestParam Long userId,
-                                                   @RequestParam String role) {
-        return BaseResponse.success(chatSessionService.listMySessions(userId, role));
+    /**
+     * 查询当前登录用户的历史会话列表。
+     */
+    @GetMapping("/sessions")
+    public Map<String, Object> listMySessions(HttpSession session) {
+        LoginUser loginUser = getLoginUser(session);
+
+        List<ChatSessionDTO> sessions = chatSessionService.listMySessions(
+                loginUser.getUserId(),
+                loginUser.getRole().name()
+        );
+
+        return success(sessions);
     }
 
-    @GetMapping("/messages")
-    public BaseResponse<List<ChatMessageDTO>> messages(@RequestParam String chatId,
-                                                       @RequestParam Long userId) {
-        return BaseResponse.success(chatSessionService.listMessages(chatId, userId));
+    /**
+     * 查询当前登录用户某个会话下的消息。
+     */
+    @GetMapping("/sessions/{chatId}/messages")
+    public Map<String, Object> listMessages(@PathVariable String chatId, HttpSession session) {
+        LoginUser loginUser = getLoginUser(session);
+
+        List<ChatMessageDTO> messages = chatSessionService.listMessages(
+                chatId,
+                loginUser.getUserId(),
+                loginUser.getRole().name()
+        );
+
+        return success(messages);
+    }
+
+    private LoginUser getLoginUser(HttpSession session) {
+        LoginUser loginUser = (LoginUser) session.getAttribute(AuthController.LOGIN_USER_SESSION_KEY);
+        if (loginUser == null) {
+            throw new IllegalStateException("请先登录");
+        }
+        return loginUser;
+    }
+
+    private Map<String, Object> success(Object data) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("code", 0);
+        result.put("message", "ok");
+        result.put("data", data);
+        return result;
     }
 }

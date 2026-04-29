@@ -37,6 +37,7 @@ public class CorsConfig implements WebMvcConfigurer {
                         "/ai/employee/**",
                         "/ai/hr/**",
                         "/ai/admin/**",
+                        "/chat/**",
                         "/manage/**"
                 )
                 .excludePathPatterns(
