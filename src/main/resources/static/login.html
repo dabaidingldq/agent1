@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>企业 HR 智能体系统 - 统一登录入口</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://unpkg.com/layui@2.9.18/dist/css/layui.css">
+
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #edf3ff 0%, #f8fbff 45%, #eef9f5 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+        }
+
+        .login-page {
+            width: 980px;
+            min-height: 560px;
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            background: #fff;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 24px 70px rgba(28, 60, 120, 0.16);
+        }
+
+        .intro {
+            padding: 56px;
+            background: linear-gradient(160deg, #1e63ff, #35b389);
+            color: #fff;
+            position: relative;
+        }
+
+        .intro h1 {
+            margin: 0 0 18px;
+            font-size: 34px;
+            font-weight: 700;
+        }
+
+        .intro p {
+            font-size: 16px;
+            line-height: 1.9;
+            opacity: 0.94;
+        }
+
+        .feature-list {
+            margin-top: 38px;
+        }
+
+        .feature-item {
+            margin-bottom: 18px;
+            padding: 14px 16px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.14);
+            backdrop-filter: blur(10px);
+        }
+
+        .form-area {
+            padding: 56px 48px;
+        }
+
+        .form-title {
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #1f2d3d;
+        }
+
+        .form-subtitle {
+            color: #7b8794;
+            margin-bottom: 32px;
+        }
+
+        .role-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .role-card {
+            border: 1px solid #e5e8ef;
+            border-radius: 14px;
+            padding: 14px 8px;
+            text-align: center;
+            cursor: pointer;
+            color: #4a5568;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .role-card.active {
+            border-color: #1e63ff;
+            background: #eef4ff;
+            color: #1e63ff;
+            font-weight: 700;
+        }
+
+        .login-btn {
+            width: 100%;
+            height: 44px;
+            border-radius: 12px;
+            margin-top: 8px;
+        }
+
+        .register-link {
+            margin-top: 18px;
+            text-align: center;
+            color: #7b8794;
+        }
+
+        .register-link a {
+            color: #1e63ff;
+            cursor: pointer;
+        }
+
+        .demo-tip {
+            margin-top: 26px;
+            padding: 14px;
+            border-radius: 12px;
+            background: #f7f9fc;
+            color: #667085;
+            line-height: 1.8;
+            font-size: 13px;
+        }
+    </style>
+</head>
+
+<body>
+<div class="login-page">
+    <div class="intro">
+        <h1>企业 HR 智能体系统</h1>
+        <p>
+            面向企业入职与行政 HR 场景，构建“知识问答 + 业务执行 + 审批追踪 + 主动通知”的统一智能入口。
+        </p>
+
+        <div class="feature-list">
+            <div class="feature-item">员工端：政策查询、事务申请、审批进度、消息通知</div>
+            <div class="feature-item">HR 端：审批处理、员工事务支持、团队数据分析</div>
+            <div class="feature-item">管理员端：知识库管理、审计日志、系统治理</div>
+        </div>
+    </div>
+
+    <div class="form-area">
+        <div class="form-title">统一身份登录</div>
+        <div class="form-subtitle">请选择身份并登录对应工作台</div>
+
+        <div class="role-cards">
+            <div class="role-card active" data-role="EMPLOYEE">员工</div>
+            <div class="role-card" data-role="HR">HR</div>
+            <div class="role-card" data-role="ADMIN">管理员</div>
+        </div>
+
+        <form class="layui-form" lay-filter="loginForm">
+            <div class="layui-form-item">
+                <input type="text" name="username" required lay-verify="required"
+                       placeholder="请输入账号" autocomplete="off" class="layui-input">
+            </div>
+
+            <div class="layui-form-item">
+                <input type="password" name="password" required lay-verify="required"
+                       placeholder="请输入密码" autocomplete="off" class="layui-input">
+            </div>
+
+            <button type="button" class="layui-btn layui-btn-normal login-btn" id="loginBtn">
+                登录进入系统
+            </button>
+        </form>
+
+        <div class="register-link">
+            没有账号？<a id="openRegister">注册新用户</a>
+        </div>
+
+        <div class="demo-tip">
+            演示账号：<br>
+            员工：employee / 123456<br>
+            HR：hr / 123456<br>
+            管理员：admin / 123456
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/layui@2.9.18/dist/layui.js"></script>
+<script>
+    layui.use(['layer'], function () {
+        const layer = layui.layer;
+
+        let currentRole = 'EMPLOYEE';
+
+        document.querySelectorAll('.role-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.role-card').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                currentRole = card.dataset.role;
+            });
+        });
+
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const username = document.querySelector('input[name="username"]').value.trim();
+            const password = document.querySelector('input[name="password"]').value.trim();
+
+            if (!username || !password) {
+                layer.msg('请输入账号和密码');
+                return;
+            }
+
+            try {
+                const res = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        username,
+                        password,
+                        role: currentRole
+                    })
+                });
+
+                const data = await res.json();
+
+                if (data.code === 0) {
+                    layer.msg('登录成功');
+                    setTimeout(() => {
+                        window.location.href = data.data.redirectUrl;
+                    }, 400);
+                } else {
+                    layer.msg(data.message || '登录失败');
+                }
+            } catch (e) {
+                console.error(e);
+                layer.msg('请求失败，请检查后端是否启动');
+            }
+        });
+
+        document.getElementById('openRegister').addEventListener('click', () => {
+            layer.open({
+                type: 1,
+                title: '注册新用户',
+                area: ['420px', '430px'],
+                content: `
+                    <div style="padding: 24px;">
+                        <div class="layui-form">
+                            <div class="layui-form-item">
+                                <input id="regUsername" class="layui-input" placeholder="账号">
+                            </div>
+                            <div class="layui-form-item">
+                                <input id="regDisplayName" class="layui-input" placeholder="显示名称">
+                            </div>
+                            <div class="layui-form-item">
+                                <input id="regPassword" type="password" class="layui-input" placeholder="密码">
+                            </div>
+                            <div class="layui-form-item">
+                                <select id="regRole" class="layui-input">
+                                    <option value="EMPLOYEE">员工</option>
+                                    <option value="HR">HR</option>
+                                    <option value="ADMIN">管理员</option>
+                                </select>
+                            </div>
+                            <button class="layui-btn layui-btn-normal" style="width:100%;" id="registerBtn">
+                                提交注册
+                            </button>
+                        </div>
+                    </div>
+                `,
+                success: function () {
+                    document.getElementById('registerBtn').onclick = async function () {
+                        const username = document.getElementById('regUsername').value.trim();
+                        const displayName = document.getElementById('regDisplayName').value.trim();
+                        const password = document.getElementById('regPassword').value.trim();
+                        const role = document.getElementById('regRole').value;
+
+                        if (!username || !displayName || !password) {
+                            layer.msg('请填写完整注册信息');
+                            return;
+                        }
+
+                        const res = await fetch('/auth/register', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            credentials: 'include',
+                            body: JSON.stringify({username, displayName, password, role})
+                        });
+
+                        const data = await res.json();
+                        if (data.code === 0) {
+                            layer.msg('注册成功，请登录');
+                            layer.closeAll();
+                        } else {
+                            layer.msg(data.message || '注册失败');
+                        }
+                    };
+                }
+            });
+        });
+    });
+</script>
+</body>
+</html>

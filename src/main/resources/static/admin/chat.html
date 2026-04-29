@@ -285,9 +285,32 @@
                 display: none;
             }
         }
+        .login-user-bar {
+            position: fixed;
+            right: 24px;
+            top: 16px;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #ffffff;
+            border: 1px solid #e8eaf0;
+            border-radius: 18px;
+            padding: 8px 14px;
+            box-shadow: 0 6px 20px rgba(31, 45, 61, 0.08);
+        }
+
+        .login-user-bar span {
+            color: #606266;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
+<div class="login-user-bar">
+    <span id="currentUserInfo">加载用户中...</span>
+    <button id="logoutBtn" class="layui-btn layui-btn-sm layui-btn-primary">退出登录</button>
+</div>
 <div class="layout">
     <aside class="sidebar">
         <h2>管理员助手</h2>
@@ -348,7 +371,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/layui.js"></script>
+<script src="/assets/auth.js"></script>
 <script>
+    const REQUIRED_ROLE = 'ADMIN';
+    const CHAT_API_URL = '/ai/admin/chat/sync';
     const CHAT_STORAGE_KEY = 'admin_chat_sessions_v1';
 
     let currentUser = null;
@@ -356,18 +382,12 @@
     let chatSessions = [];
     let layer = null;
 
-    function getCurrentUser() {
-        try {
-            const raw = localStorage.getItem('currentUser');
-            if (!raw) return { userId: 1, userName: '管理员' };
-            const user = JSON.parse(raw);
-            return {
-                userId: user.userId || 1,
-                userName: user.userName || user.username || '管理员'
-            };
-        } catch (e) {
-            return { userId: 1, userName: '管理员' };
-        }
+    function buildFrontUser(loginUser) {
+        return {
+            userId: loginUser.userId,
+            userName: loginUser.displayName || loginUser.username || '管理员',
+            role: loginUser.role
+        };
     }
 
     function loadSessions() {
@@ -510,15 +530,12 @@
     async function callAi(message) {
         const payload = {
             chatId: currentChatId,
-            userId: currentUser.userId,
             tenantId: 'default',
-            role: 'ADMIN',
             message
         };
 
-        const res = await fetch('/ai/admin/chat/sync', {
+        const res = await sessionFetch(CHAT_API_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 
@@ -594,9 +611,17 @@
         });
     }
 
-    layui.use(['layer'], function () {
+    layui.use(['layer'], async function () {
         layer = layui.layer;
-        currentUser = getCurrentUser();
+
+        const loginUser = await getCurrentUser(REQUIRED_ROLE);
+        if (!loginUser) {
+            return;
+        }
+
+        fillUserInfo(loginUser);
+        currentUser = buildFrontUser(loginUser);
+
         chatSessions = loadSessions();
 
         if (chatSessions.length) {
