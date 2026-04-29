@@ -15,7 +15,7 @@ spring:
           jdbc:
             initialize-schema: never
     dashscope:
-      api-key: sk-c7c7f8f1a0424d84bbc5681ff187270e
+      api-key: 11
       chat:
         options:
           model: qwen-plus
