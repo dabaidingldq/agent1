@@ -6,7 +6,9 @@ public record ApprovalHistoryResult(
         Long approvalId,
         String businessType,
         String status,
+        String currentNode,
         String applicantName,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {
 }

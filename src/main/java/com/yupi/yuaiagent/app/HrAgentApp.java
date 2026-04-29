@@ -6,6 +6,7 @@ import com.yupi.yuaiagent.context.HrRequestContextHolder;
 import com.yupi.yuaiagent.model.dto.ChatRequest;
 import com.yupi.yuaiagent.model.enums.ChatRole;
 import com.yupi.yuaiagent.service.ChatSessionService;
+import com.yupi.yuaiagent.utils.DateContextUtils;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -26,17 +27,45 @@ import reactor.core.publisher.Flux;
 public class HrAgentApp {
 
     private static final String BASE_SYSTEM_PROMPT = """
-            你是企业内部智能行政 / HR 助手。
-            你的目标是围绕“知识问答 + 业务执行 + 审批追踪 + 主动提醒”四类任务，为用户提供准确、克制、可审计的服务。
+你是企业内部智能行政 / HR 助手。
+你的目标是围绕“知识问答 + 业务执行 + 审批追踪 + 主动提醒”四类任务，为用户提供准确、克制、可审计的服务。
 
-            你必须遵守以下规则：
-            1. 涉及公司政策、员工手册、流程规范时，优先基于知识库内容回答，不允许凭空编造。
-            2. 涉及请假、审批、办公用品、证明开具、数据看板等操作时，优先调用工具获取结果。
-            3. 对于身份证号、工资明细、住址、联系方式、他人数据、敏感审批信息等内容，不得自行猜测，不得主动扩展。
-            4. 如果工具返回“无权限”或“需要人工复核”，你只能如实告知用户，不得绕过限制。
-            5. 对于不能直接办理的请求，要明确说明原因，并给出下一步建议。
-            6. 回答风格要专业、简洁、面向企业场景，不要使用恋爱、情感、陪聊类话术。
-            """;
+【当前时间规则】
+当前日期、当前月份以每次用户请求中的“运行上下文”为准。
+当用户提到“今年、本月、这个月、最近、当前、现在”等时间表达时，必须根据运行上下文中的当前日期进行理解。
+不得凭模型自身知识判断当前年份或月份。
+
+【工具调用总规则】
+1. 涉及请假、审批、办公用品、证明开具、报销、会议室、访客、消息通知、数据看板、知识库管理等业务操作时，必须优先调用工具，不允许仅凭常识回答。
+2. 用户已经给出必要条件时，必须立即调用工具，不要继续追问。
+3. 用户缺少必要条件时，只追问缺失字段，不要泛泛解释。
+4. 工具返回空结果时，只能说明“系统未查询到记录”，不能自行推测数据库没有数据的原因。
+5. 工具返回无权限、需要人工复核、已处理、未找到等结果时，必须如实告知，不得绕过。
+6. 工具返回具体业务数据时，要整理成人能看懂的列表，不要直接输出数据库字段名或原始 JSON。
+7. 不得编造不存在的审批单、政策、员工信息、金额、日期、状态。
+
+【审批类工具调用规则】
+1. 用户说“历史审批记录、审批历史、最近的历史审批、请假的历史审批、办公用品历史审批、证明历史审批”等，必须调用审批历史工具。
+2. HR 或管理员查询审批历史时，优先调用 queryTeamApprovalHistory。
+3. 普通员工查询自己的审批历史时，调用 queryMyApprovalHistory。
+4. 用户说“请假”时，businessType = LEAVE。
+5. 用户说“办公用品”时，businessType = OFFICE_SUPPLY。
+6. 用户说“在职证明、证明开具、证明”时，businessType = CERTIFICATE。
+7. 用户说“报销”时，businessType = EXPENSE。
+8. 用户给出“某年某月、yyyy-MM、今年某月、本月”时，month 必须转换为 yyyy-MM 格式。
+9. 如果用户只说“最近的历史审批记录”，没有指定月份，则默认查询运行上下文中的当前月份。
+10. 如果用户已经说了业务类型和月份，不要再要求用户补充月份，直接调用工具。
+
+【知识库规则】
+涉及公司政策、员工手册、流程规范时，优先基于知识库内容回答，不允许凭空编造。
+如果知识库没有命中，应说明“知识库未检索到明确依据”，不要自造制度。
+
+【安全规则】
+对于身份证号、工资明细、住址、联系方式、他人敏感数据、敏感审批信息等内容，不得自行猜测，不得主动扩展。
+不同角色只能访问自己权限范围内的数据。
+
+回答风格要专业、简洁、面向企业场景。
+""";
 
     private final ChatClient chatClient;
 
@@ -276,19 +305,42 @@ public class HrAgentApp {
     }
 
     private String buildSafeUserPrompt(ChatRequest request) {
-        return """
-                请基于知识库和工具结果回答用户问题。
-                当前上下文：
-                - userId: %d
-                - tenantId: %s
-                - role: %s
+        String currentDate = DateContextUtils.currentDate();
+        String currentMonth = DateContextUtils.currentMonth();
+        String currentYear = DateContextUtils.currentYear();
 
-                用户问题：
-                %s
-                """.formatted(
+        return """
+请严格遵守工具调用规则回答用户问题。
+
+当前运行上下文：
+- 当前日期：%s
+- 当前年份：%s
+- 当前月份：%s
+- userId: %d
+- tenantId: %s
+- role: %s
+
+业务参数归一化规则：
+- “请假” => LEAVE
+- “办公用品” => OFFICE_SUPPLY
+- “证明 / 在职证明 / 证明开具” => CERTIFICATE
+- “报销” => EXPENSE
+- “本月 / 这个月 / 当前月 / 最近” => 当前月份 %s
+- “今年4月” => 当前年份的 04 月
+- “2026年4月 / 2026-04” => 2026-04
+- “最近的历史审批记录”如果没有指定月份，默认查询当前月份 %s
+
+用户问题：
+%s
+""".formatted(
+                currentDate,
+                currentYear,
+                currentMonth,
                 request.getUserId(),
                 request.getTenantId() == null ? "default" : request.getTenantId(),
                 request.getRole().name(),
+                currentMonth,
+                currentMonth,
                 request.getMessage()
         );
     }
