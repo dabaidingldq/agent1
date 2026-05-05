@@ -620,34 +620,53 @@
         return await res.text();
     }
 
-    function appendMessage(role, content) {
-        if (!currentChatId) {
+    async function sendMessage(messageText, createNew = false, title = '') {
+        const text = String(messageText || '').trim();
+        if (!text) {
+            layer.msg('请输入内容');
             return;
         }
 
-        const senderType = role === 'user' ? 'USER' : 'ASSISTANT';
-
-        currentMessages.push({
-            id: null,
-            chatId: currentChatId,
-            userId: currentUser ? currentUser.userId : null,
-            senderType,
-            content,
-            createdAt: new Date().toISOString()
-        });
-
-        const session = getCurrentSession();
-        if (session) {
-            session.lastMessage = content;
-            session.updatedAt = new Date().toISOString();
-
-            if (role === 'user' && (!session.title || session.title === '新对话')) {
-                session.title = buildTitleFromMessage(content);
-            }
+        if (createNew || !getCurrentSession()) {
+            createSession(title || buildTitleFromMessage(text), '');
         }
 
-        renderChatList();
-        renderMessages();
+        appendMessage('user', text);
+        appendMessage('assistant', '正在处理中，请稍候...');
+
+        const loadingIndex = currentMessages.length - 1;
+
+        try {
+            const reply = await callAi(text);
+
+            currentMessages[loadingIndex] = {
+                id: null,
+                chatId: currentChatId,
+                userId: currentUser ? currentUser.userId : null,
+                senderType: 'ASSISTANT',
+                content: reply || '系统未返回内容',
+                createdAt: new Date().toISOString()
+            };
+
+            renderMessages();
+
+            chatSessions = await loadSessions();
+            currentMessages = await loadMessages(currentChatId);
+
+            renderChatList();
+            renderMessages();
+        } catch (e) {
+            currentMessages[loadingIndex] = {
+                id: null,
+                chatId: currentChatId,
+                userId: currentUser ? currentUser.userId : null,
+                senderType: 'ASSISTANT',
+                content: '请求失败：' + e.message,
+                createdAt: new Date().toISOString()
+            };
+
+            renderMessages();
+        }
     }
 
     function buildPromptByType(type, data) {
@@ -1098,6 +1117,7 @@
 
         fillUserInfo(loginUser);
         currentUser = buildFrontUser(loginUser);
+
         chatSessions = await loadSessions();
 
         if (chatSessions.length) {

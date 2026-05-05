@@ -1,6 +1,6 @@
 spring:
   application:
-    name: yu-ai-agent
+    name: hr-agent-system
 
   datasource:
     url: jdbc:mysql://localhost:3306/aiagent?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
@@ -15,7 +15,7 @@ spring:
           jdbc:
             initialize-schema: never
     dashscope:
-      api-key: 11
+      api-key:
       chat:
         options:
           model: qwen-plus
@@ -30,7 +30,7 @@ server:
 logging:
   level:
     org.springframework.ai: info
-    com.yupi.yuaiagent: debug
+    com.ldq.hragent: debug
 
 hr:
   knowledge:

@@ -102,9 +102,7 @@
     <div class="card">
         <h2 class="section-title">查询条件</h2>
         <div class="toolbar">
-            <label>管理员用户 ID：
-                <input id="userId" type="number" value="1" />
-            </label>
+
             <label>业务类型：
                 <select id="businessType">
                     <option value="">全部</option>
@@ -155,75 +153,90 @@
         </table>
     </div>
 </div>
-
+<script src="/assets/auth.js"></script>
 <script>
-    const role = 'ADMIN';
-
-    function getUserId() {
-        const value = document.getElementById('userId').value;
-        if (!value) {
-            alert('请先填写 userId');
-            throw new Error('userId empty');
-        }
-        return value;
-    }
+    let currentUser = null;
 
     function buildQuery(includeStatus) {
-        const userId = getUserId();
         const businessType = document.getElementById('businessType').value;
         const status = document.getElementById('status').value;
 
         const params = new URLSearchParams();
-        params.set('userId', userId);
-        params.set('role', role);
-        if (businessType) params.set('businessType', businessType);
-        if (includeStatus && status) params.set('status', status);
+
+        if (businessType) {
+            params.set('businessType', businessType);
+        }
+
+        if (includeStatus && status) {
+            params.set('status', status);
+        }
+
         return params.toString();
     }
 
     async function loadPending() {
-        setMessage('正在加载待审批列表...');
-        const res = await fetch(`/manage/approvals/pending?${buildQuery(false)}`);
-        const data = await res.json();
-        renderTable(data.data || []);
-        setMessage(data.message || '待审批列表已刷新');
+        try {
+            setMessage('正在加载待审批列表...');
+            const query = buildQuery(false);
+            const res = await sessionFetch(`/manage/approvals/pending${query ? '?' + query : ''}`, {
+                method: 'GET'
+            });
+            const data = await res.json();
+            renderTable(data.data || []);
+            setMessage(data.message || '待审批列表已刷新');
+        } catch (e) {
+            renderTable([]);
+            setMessage('加载待审批列表失败：' + e.message);
+        }
     }
 
     async function loadAll() {
-        setMessage('正在加载全部审批列表...');
-        const res = await fetch(`/manage/approvals/all?${buildQuery(true)}`);
-        const data = await res.json();
-        renderTable(data.data || []);
-        setMessage(data.message || '全部审批列表已刷新');
+        try {
+            setMessage('正在加载全部审批列表...');
+            const query = buildQuery(true);
+            const res = await sessionFetch(`/manage/approvals/all${query ? '?' + query : ''}`, {
+                method: 'GET'
+            });
+            const data = await res.json();
+            renderTable(data.data || []);
+            setMessage(data.message || '全部审批列表已刷新');
+        } catch (e) {
+            renderTable([]);
+            setMessage('加载全部审批列表失败：' + e.message);
+        }
     }
 
     function renderTable(rows) {
         const tbody = document.getElementById('approvalTableBody');
-        if (!rows.length) {
+
+        if (!Array.isArray(rows) || !rows.length) {
             tbody.innerHTML = '<tr><td colspan="8" class="muted">暂无数据</td></tr>';
             return;
         }
 
         tbody.innerHTML = rows.map(row => `
             <tr>
-                <td>${row.id ?? '--'}</td>
-                <td>${row.employeeName ?? '--'}<div class="muted">userId: ${row.applicantUserId ?? '--'}</div></td>
-                <td>${row.businessType ?? '--'}</td>
-                <td>${row.status ?? '--'}</td>
-                <td>${row.currentNode ?? '--'}</td>
+                <td>${escapeHtml(row.id ?? '--')}</td>
+                <td>
+                    ${escapeHtml(row.employeeName ?? '--')}
+                    <div class="muted">userId: ${escapeHtml(row.applicantUserId ?? '--')}</div>
+                </td>
+                <td>${escapeHtml(row.businessType ?? '--')}</td>
+                <td>${escapeHtml(row.status ?? '--')}</td>
+                <td>${escapeHtml(row.currentNode ?? '--')}</td>
                 <td>${escapeHtml(row.detailSummary || '--')}</td>
                 <td>${formatTime(row.createdAt)}</td>
                 <td>
                     <div class="row-actions">
                         ${(row.status === 'PENDING' || row.status === 'PENDING_REVIEW')
             ? `
-      <button class="success" onclick="handleApproval(${row.id}, 'approve')">通过</button>
-      <button class="danger" onclick="handleApproval(${row.id}, 'reject')">驳回</button>
-      <button class="secondary" onclick="resetApproval(${row.id}, '${row.status}')">修改词条</button>
-      `
+                              <button class="success" onclick="handleApproval(${row.id}, 'approve')">通过</button>
+                              <button class="danger" onclick="handleApproval(${row.id}, 'reject')">驳回</button>
+                              <button class="secondary" onclick="resetApproval(${row.id}, '${row.status}')">修改词条</button>
+                              `
             : `
-      <button class="secondary" onclick="resetApproval(${row.id}, '${row.status}')">修改词条</button>
-      `
+                              <button class="secondary" onclick="resetApproval(${row.id}, '${row.status}')">修改词条</button>
+                              `
         }
                     </div>
                 </td>
@@ -232,21 +245,57 @@
     }
 
     async function handleApproval(id, action) {
-        const userId = getUserId();
         const comment = document.getElementById('comment').value || '';
-        const confirmed = confirm(`确认要对审批单 #${id} 执行${action === 'approve' ? '通过' : '驳回'}吗？`);
-        if (!confirmed) return;
+        const actionText = action === 'approve' ? '通过' : '驳回';
+        const confirmed = confirm(`确认要对审批单 #${id} 执行${actionText}吗？`);
 
-        setMessage(`正在提交审批操作：#${id} ...`);
+        if (!confirmed) {
+            return;
+        }
 
-        const res = await fetch(`/manage/approvals/${id}/${action}?userId=${encodeURIComponent(userId)}&role=${role}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ comment })
-        });
-        const data = await res.json();
-        alert(data.data || data.message || '操作完成');
-        await loadAll();
+        try {
+            setMessage(`正在提交审批操作：#${id} ...`);
+
+            const res = await sessionFetch(`/manage/approvals/${id}/${action}`, {
+                method: 'POST',
+                body: JSON.stringify({ comment })
+            });
+
+            const data = await res.json();
+            alert(data.data || data.message || '操作完成');
+            await loadAll();
+        } catch (e) {
+            alert('操作失败：' + e.message);
+            setMessage('操作失败：' + e.message);
+        }
+    }
+
+    async function resetApproval(id, status) {
+        if (status === 'PENDING' || status === 'PENDING_REVIEW') {
+            alert('已是待审批状态');
+            return;
+        }
+
+        const confirmed = confirm(`确认将审批单 #${id} 重置为待审批状态吗？`);
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            setMessage(`正在重置审批单：#${id} ...`);
+
+            const res = await sessionFetch(`/manage/approvals/${id}/reset`, {
+                method: 'POST'
+            });
+
+            const data = await res.json();
+            alert(data.data || data.message || '操作完成');
+            await loadAll();
+        } catch (e) {
+            alert('重置失败：' + e.message);
+            setMessage('重置失败：' + e.message);
+        }
     }
 
     function setMessage(msg) {
@@ -259,36 +308,24 @@
     }
 
     function escapeHtml(text) {
-        return String(text)
+        return String(text ?? '')
             .replaceAll('&', '&amp;')
             .replaceAll('<', '&lt;')
             .replaceAll('>', '&gt;')
             .replaceAll('"', '&quot;')
             .replaceAll("'", '&#39;');
     }
-    async function resetApproval(id, status) {
-        if (status === 'PENDING' || status === 'PENDING_REVIEW') {
-            alert('已是待审批状态');
+
+    async function initPage() {
+        currentUser = await getCurrentUser('ADMIN');
+        if (!currentUser) {
             return;
         }
 
-        const userId = getUserId();
-        const confirmed = confirm(`确认将审批单 #${id} 重置为待审批状态吗？`);
-        if (!confirmed) return;
-
-        setMessage(`正在重置审批单：#${id} ...`);
-
-        const res = await fetch(`/manage/approvals/${id}/reset?userId=${encodeURIComponent(userId)}&role=${role}`, {
-            method: 'POST'
-        });
-        const data = await res.json();
-
-        alert(data.data || data.message || '操作完成');
-        await loadAll();
+        await loadPending();
     }
-    loadPending();
 
-
+    initPage();
 </script>
 </body>
 </html>
